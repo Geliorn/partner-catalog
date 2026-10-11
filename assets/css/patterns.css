@@ -1,0 +1,224 @@
+/* Partner Catalog — semantic colors kept fixed across themes (same policy as
+   llm-agent-github-repos/assets/css/patterns.css): everything else inherits
+   theme.json. */
+
+.pc-type-pill .wp-block-post-terms__separator { display: none; }
+.pc-type-pill a {
+	display: inline-block;
+	font-size: 11.5px;
+	padding: 2px 9px;
+	border-radius: 999px;
+	background: var(--wp--preset--color--contrast, #2f5d4f);
+	color: #fff;
+	font-weight: 600;
+	text-decoration: none;
+	margin: 2px 8px 6px 0;
+}
+
+.pc-spec-pill a,
+.pc-region a {
+	display: inline-block;
+	font-size: 11.5px;
+	padding: 2px 9px;
+	border-radius: 999px;
+	background: var(--wp--preset--color--light, #f0efe9);
+	color: inherit;
+	text-decoration: none;
+	margin: 2px 8px 6px 0;
+}
+
+.pc-region { color: var(--wp--preset--color--contrast-2, #6b6a63); }
+
+.pc-card {
+	border: 1px solid var(--wp--preset--color--light, #e3e2dd);
+	border-radius: 6px;
+	padding: 16px;
+}
+
+/* Same reasoning as llm-agent-github-repos/assets/css/patterns.css: without
+ * a reserved height, a 1-line company name/description next to a 2-line one
+ * in the same grid row pushes the rating/price/button below it out of
+ * alignment across the row. */
+.pc-card .wp-block-post-title {
+	min-height: 2.6em;
+	line-height: 1.3;
+}
+
+/* Card ratings are a plain score display (voting only happens on the
+ * contractor's own single page) — drop the pointer cursor the interactive
+ * stars use, so a card doesn't look clickable when it isn't. */
+.pc-rating-readonly .pc-rating-star {
+	cursor: default;
+}
+
+.pc-card-desc {
+	color: var(--wp--preset--color--contrast-2, #6b6a63);
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+	min-height: 2.6em;
+}
+
+.pc-card-foot {
+	margin-top: 6px;
+	padding-top: 8px;
+	border-top: 1px solid var(--wp--preset--color--light, #e3e2dd);
+}
+
+.pc-price { font-weight: 600; margin: 4px 0; }
+
+.pc-meta-list-bullet { margin: 0 0 10px; padding-left: 20px; }
+.pc-meta-list-bullet li { margin-bottom: 4px; }
+
+.pc-meta-list-badges {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+.pc-meta-list-badges li {
+	font-size: 11px;
+	font-weight: 600;
+	color: #8a5a00;
+	background: #fff3d6;
+	border: 1px solid #f0dca0;
+	border-radius: 4px;
+	padding: 2px 8px;
+}
+
+.pc-single-header { gap: 16px; }
+.pc-logo-lg img, .pc-logo img { border-radius: 8px; }
+
+.pc-stats-row {
+	gap: 22px;
+	padding: 14px 0;
+	margin: 16px 0;
+	border-top: 1px solid var(--wp--preset--color--light, #e3e2dd);
+	border-bottom: 1px solid var(--wp--preset--color--light, #e3e2dd);
+}
+
+.pc-side-box {
+	background: var(--wp--preset--color--base-2, #f7f7f5);
+	border: 1px solid var(--wp--preset--color--light, #e3e2dd);
+	border-radius: 6px;
+	padding: 16px;
+}
+
+.pc-social-btn { margin-right: 6px; }
+
+/* Own rating widget (partner-catalog/rating) — replaces WP-PostRatings. */
+.pc-rating {
+	/* NOT inline-flex — see llm-agent-github-repos/assets/css/patterns.css's
+	 * .lagr-rating for why: auto-margin centering only works on a block-level
+	 * box, and this sits as a direct top-level child on the single page. */
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+.pc-rating-stars {
+	display: inline-flex;
+	gap: 2px;
+}
+.pc-rating-star {
+	background: none;
+	border: none;
+	padding: 0;
+	font-size: 15px;
+	line-height: 1;
+	color: #c0392b;
+	cursor: pointer;
+}
+.pc-rating-large .pc-rating-star { font-size: 26px; }
+.pc-rating-star:disabled { cursor: default; opacity: 0.85; }
+.pc-rating-voted .pc-rating-star { text-shadow: 0 0 0 currentColor; }
+.pc-rating-score {
+	font-size: 12.5px;
+	color: var(--wp--preset--color--contrast-2, #6b6a63);
+}
+.pc-rating-score b { color: inherit; font-variant-numeric: tabular-nums; }
+.pc-rating-large .pc-rating-score { font-size: 14px; }
+
+/* Own related-posts block (partner-catalog/related-posts) — replaces
+ * Contextual Related Posts' unstyled default output. */
+.pc-related {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+	gap: 12px;
+}
+.pc-related-card {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	padding: 12px;
+	border: 1px solid var(--wp--preset--color--light, #e3e2dd);
+	border-radius: 6px;
+	text-decoration: none;
+	color: inherit;
+}
+.pc-related-title { font-size: 13.5px; font-weight: 600; }
+.pc-related-rating {
+	font-size: 11px;
+	color: var(--wp--preset--color--contrast-2, #6b6a63);
+}
+.pc-related-rating b { color: inherit; font-variant-numeric: tabular-nums; }
+
+/* partner-catalog/contractor-filters — own archive filter form (replaces
+ * Filter Everything, see class-pc-filters.php). Plain GET form, no JS
+ * framework, so the styling only needs to cover native form elements. */
+.pc-filters {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+.pc-filter-group {
+	border: none;
+	padding: 0;
+	margin: 0;
+}
+.pc-filter-group legend {
+	font-size: 12px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--wp--preset--color--contrast-2, #6b6a63);
+	margin-bottom: 8px;
+	padding: 0;
+}
+.pc-filter-option {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 3px 0;
+	cursor: pointer;
+	line-height: 1.3;
+}
+.pc-filter-option input {
+	flex: none;
+}
+.pc-filter-count {
+	color: var(--wp--preset--color--contrast-2, #6b6a63);
+	font-size: 11.5px;
+	margin-left: auto;
+	padding-left: 8px;
+}
+.pc-filter-apply {
+	background: var(--wp--preset--color--accent, #2f5d4f);
+	color: var(--wp--preset--color--base, #fff);
+	border: none;
+	border-radius: 999px;
+	padding: 8px 16px;
+	font-size: 13px;
+	font-weight: 600;
+	cursor: pointer;
+}
+.pc-filter-reset {
+	display: inline-block;
+	text-align: center;
+	font-size: 12.5px;
+	text-decoration: underline;
+	color: inherit;
+	margin-top: 4px;
+}

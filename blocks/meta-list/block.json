@@ -1,0 +1,16 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "partner-catalog/meta-list",
+	"title": "Список из meta-поля",
+	"category": "text",
+	"description": "Выводит многострочное meta-поле (особенности, клиенты, партнёрства) как список — bullet или строка бейджей.",
+	"textdomain": "partner-catalog",
+	"attributes": {
+		"metaKey": { "type": "string", "default": "_pc_features" },
+		"style": { "type": "string", "default": "bullet" }
+	},
+	"supports": { "html": false, "className": true },
+	"render": "file:./render.php",
+	"editorScript": "file:./index.js"
+}
