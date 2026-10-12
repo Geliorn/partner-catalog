@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Partner Catalog
  * Description: Каталог подрядчиков и сервис-провайдеров (интеграторы, дистрибьюторы, хостинги, облачные платформы и т.д.) с ручным наполнением карточек. Без парсинга/сборщика — самодостаточен, не зависит от ACF/CPT UI.
- * Version: 0.2.7
+ * Version: 0.3.0
  * Author: llm-agent.ru
  * Text Domain: partner-catalog
  */
@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'PC_VERSION', '0.2.7' );
+define( 'PC_VERSION', '0.3.0' );
 define( 'PC_PLUGIN_FILE', __FILE__ );
 define( 'PC_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'PC_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -28,6 +28,8 @@ require_once PC_PLUGIN_DIR . 'includes/class-pc-blocks.php';
 require_once PC_PLUGIN_DIR . 'includes/class-pc-patterns.php';
 require_once PC_PLUGIN_DIR . 'includes/class-pc-admin.php';
 require_once PC_PLUGIN_DIR . 'includes/class-pc-filters.php';
+require_once PC_PLUGIN_DIR . 'includes/class-pc-llm-client.php';
+require_once PC_PLUGIN_DIR . 'includes/class-pc-import.php';
 
 /**
  * Boot the plugin — every class hooks itself in its own init() method.
@@ -43,6 +45,7 @@ function pc_boot() {
 	PC_Patterns::init();
 	PC_Admin::init();
 	PC_Filters::init();
+	PC_Import::init();
 }
 add_action( 'plugins_loaded', 'pc_boot' );
 

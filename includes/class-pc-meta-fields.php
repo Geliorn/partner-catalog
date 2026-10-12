@@ -126,6 +126,19 @@ class PC_Meta_Fields {
 
 		echo '<h3 style="margin-top:0">Основное</h3>';
 		self::field( $post->ID, '_pc_short_description', 'Короткое описание (1–2 предложения, для карточки в архиве)', 'textarea', array( 'rows' => 2 ) );
+
+		if ( class_exists( 'PC_LLM_Client' ) ) {
+			$gen_url = wp_nonce_url(
+				admin_url( 'admin-post.php?action=pc_generate_description&post_id=' . $post->ID ),
+				'pc_generate_desc_' . $post->ID
+			);
+			$ready = PC_LLM_Client::ready();
+			echo '<p style="margin:4px 0 14px">';
+			echo '<a class="button" href="' . esc_url( $gen_url ) . '"' . ( $ready ? '' : ' onclick="alert(\'Укажите API-ключ AI-провайдера в настройках Partner Catalog.\');return false;"' ) . '>✨ Сгенерировать описание (AI)</a>';
+			echo ' <span class="description">по сохранённым данным (тип, специализация, особенности…); перезапишет короткое и полное описание. Сначала сохраните запись.</span>';
+			echo '</p>';
+		}
+
 		self::field( $post->ID, '_pc_website', 'Сайт', 'url' );
 
 		echo '<h3>Контакты</h3>';

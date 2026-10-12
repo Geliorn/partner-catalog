@@ -25,7 +25,10 @@ class PC_Admin {
 	public static function init() {
 		add_action( 'admin_menu', array( __CLASS__, 'register_menu' ) );
 		add_action( 'admin_post_pc_save_settings', array( __CLASS__, 'handle_save_settings' ) );
+		add_action( 'admin_post_pc_generate_description', array( __CLASS__, 'handle_generate_description' ) );
+		add_action( 'admin_post_pc_generate_all', array( __CLASS__, 'handle_generate_all' ) );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_dashboard_assets' ) );
+		add_action( 'admin_notices', array( __CLASS__, 'maybe_generation_notice' ) );
 	}
 
 	public static function register_menu() {
@@ -103,10 +106,61 @@ class PC_Admin {
 					<tr><th>Фильтры архива</th><td><label><input type="checkbox" name="integration_filters" value="1" <?php checked( $s['integration_filters'] ); ?>> боковая панель фильтров на архиве (partner-catalog/contractor-filters) — свой код, без стороннего плагина</label></td></tr>
 				</table>
 
+				<h2>AI-описания поставщиков</h2>
+				<p class="description">Генерация короткого (для карточки) и полного (для страницы) описания по данным поставщика. Кнопка «Сгенерировать описание» есть на странице редактирования каждого поставщика; массовая генерация — кнопкой под формой.</p>
+				<table class="form-table">
+					<tr><th>Провайдер</th><td>
+						<select name="ai_provider">
+							<?php foreach ( PC_LLM_Client::providers() as $val => $label ) : ?>
+								<option value="<?php echo esc_attr( $val ); ?>" <?php selected( $s['ai_provider'], $val ); ?>><?php echo esc_html( $label ); ?></option>
+							<?php endforeach; ?>
+						</select>
+					</td></tr>
+				</table>
+				<h3>DeepSeek напрямую</h3>
+				<table class="form-table">
+					<tr><th>API Key</th><td><input type="password" name="deepseek_api_key" value="<?php echo esc_attr( $s['deepseek_api_key'] ); ?>" style="width:400px"></td></tr>
+					<tr><th>Модель</th><td><input type="text" name="deepseek_model" value="<?php echo esc_attr( $s['deepseek_model'] ); ?>" style="width:400px"></td></tr>
+				</table>
+				<h3>Qwen (Alibaba DashScope)</h3>
+				<table class="form-table">
+					<tr><th>API Key</th><td><input type="password" name="qwen_api_key" value="<?php echo esc_attr( $s['qwen_api_key'] ); ?>" style="width:400px"></td></tr>
+					<tr><th>Модель</th><td><input type="text" name="qwen_model" value="<?php echo esc_attr( $s['qwen_model'] ); ?>" style="width:400px"> <span class="description">напр. qwen-plus, qwen-max, qwen-turbo</span></td></tr>
+					<tr><th>Base URL</th><td><input type="text" name="qwen_base_url" value="<?php echo esc_attr( $s['qwen_base_url'] ); ?>" style="width:400px"> <span class="description">compatible-mode host DashScope (междунар. или КНР)</span></td></tr>
+				</table>
+
 				<?php submit_button( 'Сохранить настройки' ); ?>
 			</form>
+
+			<h2>Массовая генерация описаний</h2>
+			<p class="description">Сгенерирует описание для поставщиков <strong>без короткого описания</strong> (до 10 за один запуск, чтобы уложиться в лимит времени — запускайте повторно, пока есть записи).</p>
+			<?php
+			$missing = self::count_contractors_without_description();
+			$gen_url = wp_nonce_url( admin_url( 'admin-post.php?action=pc_generate_all' ), 'pc_generate_all' );
+			?>
+			<p>
+				<a class="button button-primary" href="<?php echo esc_url( $gen_url ); ?>" <?php echo PC_LLM_Client::ready() ? '' : 'onclick="alert(\'Сначала укажите API-ключ провайдера и сохраните настройки.\');return false;"'; ?>>Сгенерировать для всех без описания</a>
+				<span class="description" style="margin-left:8px">Без описания: <?php echo (int) $missing; ?></span>
+			</p>
 		</div>
 		<?php
+	}
+
+	/** Contractors that still have no short description. */
+	private static function count_contractors_without_description() {
+		$q = new WP_Query( array(
+			'post_type'      => 'contractor',
+			'post_status'    => 'any',
+			'posts_per_page' => 1,
+			'fields'         => 'ids',
+			'no_found_rows'  => false,
+			'meta_query'     => array(
+				'relation' => 'OR',
+				array( 'key' => '_pc_short_description', 'compare' => 'NOT EXISTS' ),
+				array( 'key' => '_pc_short_description', 'value' => '', 'compare' => '=' ),
+			),
+		) );
+		return (int) $q->found_posts;
 	}
 
 	public static function handle_save_settings() {
@@ -116,7 +170,10 @@ class PC_Admin {
 		}
 
 		$checkboxes  = array( 'integration_ratings', 'integration_related_posts', 'integration_filters' );
-		$text_fields = array( 'utm_source', 'utm_medium', 'utm_campaign_template', 'utm_content_template', 'metrika_counter_id', 'seo_plugin' );
+		$text_fields = array(
+			'utm_source', 'utm_medium', 'utm_campaign_template', 'utm_content_template', 'metrika_counter_id', 'seo_plugin',
+			'ai_provider', 'deepseek_api_key', 'deepseek_model', 'qwen_api_key', 'qwen_model', 'qwen_base_url',
+		);
 
 		$values = array();
 		foreach ( $text_fields as $key ) {
@@ -132,6 +189,69 @@ class PC_Admin {
 
 		wp_safe_redirect( admin_url( 'admin.php?page=' . self::MAIN_SLUG . '&saved=1' ) );
 		exit;
+	}
+
+	// --------------------------------------------------------- AI generation
+
+	/** Generate the description for one contractor (edit-screen button). */
+	public static function handle_generate_description() {
+		$post_id = isset( $_GET['post_id'] ) ? absint( $_GET['post_id'] ) : 0;
+		check_admin_referer( 'pc_generate_desc_' . $post_id );
+		if ( ! $post_id || 'contractor' !== get_post_type( $post_id ) || ! current_user_can( 'edit_post', $post_id ) ) {
+			wp_die( 'Недостаточно прав.' );
+		}
+		$ok  = PC_LLM_Client::ready() && PC_LLM_Client::generate_for_post( $post_id );
+		$url = get_edit_post_link( $post_id, 'url' );
+		wp_safe_redirect( add_query_arg( 'pc_gen', $ok ? 'ok' : 'fail', $url ? $url : admin_url() ) );
+		exit;
+	}
+
+	/** Bulk-generate for up to 10 contractors that have no short description yet. */
+	public static function handle_generate_all() {
+		if ( ! current_user_can( 'manage_options' ) || ! check_admin_referer( 'pc_generate_all' ) ) {
+			wp_die( 'Недостаточно прав.' );
+		}
+		$redirect = admin_url( 'admin.php?page=' . self::MAIN_SLUG );
+		if ( ! PC_LLM_Client::ready() ) {
+			wp_safe_redirect( add_query_arg( 'pc_bulk', 'notready', $redirect ) );
+			exit;
+		}
+		$ids = get_posts( array(
+			'post_type'      => 'contractor',
+			'post_status'    => 'any',
+			'posts_per_page' => 10,
+			'fields'         => 'ids',
+			'no_found_rows'  => true,
+			'meta_query'     => array(
+				'relation' => 'OR',
+				array( 'key' => '_pc_short_description', 'compare' => 'NOT EXISTS' ),
+				array( 'key' => '_pc_short_description', 'value' => '', 'compare' => '=' ),
+			),
+		) );
+		$done = 0;
+		foreach ( $ids as $id ) {
+			$done += PC_LLM_Client::generate_for_post( $id ) ? 1 : 0;
+		}
+		wp_safe_redirect( add_query_arg( array( 'pc_bulk' => 'done', 'n' => $done ), $redirect ) );
+		exit;
+	}
+
+	/** Success/error notices after single or bulk generation. */
+	public static function maybe_generation_notice() {
+		if ( isset( $_GET['pc_gen'] ) ) {
+			if ( 'ok' === $_GET['pc_gen'] ) {
+				echo '<div class="notice notice-success is-dismissible"><p>Описание сгенерировано и сохранено.</p></div>';
+			} else {
+				echo '<div class="notice notice-error is-dismissible"><p>Не удалось сгенерировать описание — проверьте провайдера и API-ключ.</p></div>';
+			}
+		}
+		if ( isset( $_GET['pc_bulk'] ) ) {
+			if ( 'notready' === $_GET['pc_bulk'] ) {
+				echo '<div class="notice notice-error is-dismissible"><p>Не задан API-ключ выбранного AI-провайдера.</p></div>';
+			} else {
+				echo '<div class="notice notice-success is-dismissible"><p>Сгенерировано описаний: ' . (int) ( $_GET['n'] ?? 0 ) . '. Если остались записи без описания — запустите ещё раз.</p></div>';
+			}
+		}
 	}
 
 	// ------------------------------------------------------------ analytics

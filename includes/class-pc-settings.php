@@ -29,6 +29,15 @@ class PC_Settings {
 			// SEO plugin whose own meta field gets the short description — 'none' skips it.
 			'seo_plugin'                    => 'none',
 
+			// AI description generation (PC_LLM_Client). Provider + credentials;
+			// generation is on-demand via buttons, so there's no enable flag.
+			'ai_provider'           => 'deepseek', // deepseek | qwen
+			'deepseek_api_key'      => '',
+			'deepseek_model'        => 'deepseek-chat',
+			'qwen_api_key'          => '',
+			'qwen_model'            => 'qwen-plus',
+			'qwen_base_url'         => 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1',
+
 			// Feature on/off switches. `ratings`/`related_posts` used to mean "is the
 			// third-party plugin active" — decided 2026-09-04 to bring both in-house
 			// as the plugin's own code (class-pc-ratings.php/class-pc-related.php),
