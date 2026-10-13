@@ -28,7 +28,7 @@ class PC_Patterns {
 	public static function enqueue_assets() {
 		wp_enqueue_style( 'pc-patterns', PC_PLUGIN_URL . 'assets/css/patterns.css', array(), PC_VERSION );
 
-		if ( ! is_admin() && ( is_singular( 'contractor' ) || is_post_type_archive( 'contractor' ) || is_tax( array( 'contractor_type', 'contractor_specialization', 'contractor_region' ) ) ) ) {
+		if ( ! is_admin() && ( is_singular( 'contractor' ) || is_post_type_archive( 'contractor' ) || is_tax( array( 'contractor_type', 'contractor_specialization' ) ) ) ) {
 			wp_enqueue_script( 'pc-analytics', PC_PLUGIN_URL . 'assets/js/pc-analytics.js', array(), PC_VERSION, true );
 			wp_localize_script(
 				'pc-analytics',
@@ -61,7 +61,7 @@ class PC_Patterns {
 			'partner-catalog/archive-grid',
 			array(
 				'title'       => 'Подрядчики: сетка архива',
-				'description' => 'Сетка карточек для архива каталога/типа/специализации/региона — наследует запрос архива + пагинация. Боковой AJAX-фильтр (Filter Everything) настраивается отдельно в админке, см. README.',
+				'description' => 'Сетка карточек для архива каталога/типа/специализации — наследует запрос архива + пагинация. Сортировка и фильтры живут в блоке «Фильтры подрядчиков» (боковая колонка шаблона).',
 				'categories'  => array( self::CATEGORY ),
 				'content'     => self::archive_grid_markup(),
 			)
@@ -201,15 +201,15 @@ class PC_Patterns {
 <!-- wp:group {"layout":{"type":"constrained"}} -->
 <div class="wp-block-group">
 <!-- wp:post-title {"isLink":true,"fontSize":"medium"} /-->
-<!-- wp:post-terms {"term":"contractor_region","separator":" ","className":"pc-region","fontSize":"small"} /-->
+<!-- wp:post-terms {"term":"contractor_type","separator":" ","className":"pc-type-pill","fontSize":"small"} /-->
 </div>
 <!-- /wp:group -->
 </div>
 <!-- /wp:group -->
+
+<!-- wp:partner-catalog/badges /-->
 
 ' . self::bound_paragraph( '_pc_short_description', 'Короткое описание', 'small', 'pc-card-desc' ) . '
-
-<!-- wp:post-terms {"term":"contractor_type","separator":" ","className":"pc-type-pill","fontSize":"small"} /-->
 
 <!-- wp:post-terms {"term":"contractor_specialization","separator":" ","className":"pc-spec-pill","fontSize":"small"} /-->
 
@@ -276,9 +276,9 @@ class PC_Patterns {
 <!-- wp:group {"layout":{"type":"constrained"}} -->
 <div class="wp-block-group">
 <!-- wp:post-title {"level":1} /-->
-<!-- wp:post-terms {"term":"contractor_region","separator":" ","className":"pc-region","fontSize":"small"} /-->
 <!-- wp:post-terms {"term":"contractor_type","separator":" ","className":"pc-type-pill","fontSize":"small"} /-->
 <!-- wp:post-terms {"term":"contractor_specialization","separator":" ","className":"pc-spec-pill","fontSize":"small"} /-->
+<!-- wp:partner-catalog/badges /-->
 </div>
 <!-- /wp:group -->
 </div>
@@ -298,8 +298,7 @@ class PC_Patterns {
 <!-- wp:group {"className":"pc-stats-row","layout":{"type":"flex","flexWrap":"wrap"}} -->
 <div class="wp-block-group pc-stats-row">
 ' . self::labeled_stat( self::bound_paragraph( '_pc_founded_year', '—', 'medium' ), 'год основания' ) . '
-' . self::labeled_stat( self::bound_paragraph( '_pc_team_size', '—', 'medium' ), 'сотрудников' ) . '
-' . self::labeled_stat( '<!-- wp:partner-catalog/price {"fontSize":"medium"} /-->', 'стоимость проекта' ) . '
+' . self::labeled_stat( '<!-- wp:partner-catalog/price {"fontSize":"medium"} /-->', 'стоимость' ) . '
 </div>
 <!-- /wp:group -->
 
@@ -315,11 +314,15 @@ class PC_Patterns {
 
 <!-- wp:heading {"level":3} --><h3>Ключевые клиенты</h3><!-- /wp:heading -->
 ' . self::meta_list( '_pc_clients', 'bullet' ) . '
+
+<!-- wp:partner-catalog/faq /-->
 </div>
 <!-- /wp:column -->
 
 <!-- wp:column {"width":"33.33%"} -->
 <div class="wp-block-column" style="flex-basis:33.33%">
+<!-- wp:partner-catalog/promo /-->
+
 <!-- wp:group {"className":"pc-side-box","layout":{"type":"constrained"}} -->
 <div class="wp-block-group pc-side-box">
 <!-- wp:heading {"level":4} --><h4>Телефон</h4><!-- /wp:heading -->

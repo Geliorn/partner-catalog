@@ -15,8 +15,7 @@
 	margin: 2px 8px 6px 0;
 }
 
-.pc-spec-pill a,
-.pc-region a {
+.pc-spec-pill a {
 	display: inline-block;
 	font-size: 11.5px;
 	padding: 2px 9px;
@@ -27,7 +26,29 @@
 	margin: 2px 8px 6px 0;
 }
 
-.pc-region { color: var(--wp--preset--color--contrast-2, #6b6a63); }
+/* Usage badges (partner-catalog/badges) — the listing's "Бесплатно / демо /
+ * промокод" row. Colour carries the meaning here, so each flag keeps its own
+ * tint rather than all four looking like the neutral spec pills above. */
+.pc-badges {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	list-style: none;
+	margin: 6px 0 8px;
+	padding: 0;
+}
+.pc-badge {
+	font-size: 11.5px;
+	line-height: 1.5;
+	padding: 2px 9px;
+	border-radius: 999px;
+	background: var(--wp--preset--color--light, #f0efe9);
+	white-space: nowrap;
+}
+.pc-badge-free,
+.pc-badge-free_tier { background: #e3f3ea; color: #1f6b47; }
+.pc-badge-trial { background: #eaeef8; color: #2f4a8a; }
+.pc-badge-promo { background: #fdf0e0; color: #8a5a1b; }
 
 .pc-card {
 	border: 1px solid var(--wp--preset--color--light, #e3e2dd);
@@ -140,6 +161,146 @@
 }
 .pc-rating-score b { color: inherit; font-variant-numeric: tabular-nums; }
 .pc-rating-large .pc-rating-score { font-size: 14px; }
+.pc-rating-of { opacity: 0.7; }
+
+/* The criteria form is a stack, not a row — only the compact card variant
+ * stays on one line (see .pc-rating's flex above). */
+.pc-rating-large {
+	flex-direction: column;
+	align-items: stretch;
+	gap: 10px;
+	border: 1px solid var(--wp--preset--color--light, #e3e2dd);
+	border-radius: 10px;
+	padding: 14px 16px;
+}
+.pc-rating-overall {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+.pc-rating-overall .pc-rating-score { font-size: 14px; }
+.pc-rating-criteria {
+	display: grid;
+	gap: 6px;
+}
+.pc-rating-row {
+	display: grid;
+	/* Label | stars | current score: the score column is fixed so the star
+	 * rows stay vertically aligned whatever the numbers are. */
+	grid-template-columns: minmax(0, 1fr) auto 2.6em;
+	align-items: center;
+	gap: 10px;
+}
+.pc-rating-label { font-size: 13.5px; }
+.pc-rating-crit-score {
+	font-size: 13px;
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+	color: var(--wp--preset--color--contrast-2, #6b6a63);
+}
+.pc-rating-large .pc-rating-row .pc-rating-star { font-size: 18px; }
+.pc-rating-star.is-selected { text-shadow: 0 0 0.6px currentColor; transform: scale(1.1); }
+.pc-rating-submit {
+	justify-self: start;
+	background: var(--wp--preset--color--accent, #2f5d4f);
+	color: var(--wp--preset--color--base, #fff);
+	border: none;
+	border-radius: 999px;
+	padding: 7px 18px;
+	font-size: 13px;
+	cursor: pointer;
+}
+.pc-rating-submit:disabled { opacity: 0.45; cursor: default; }
+.pc-rating-note {
+	font-size: 12px;
+	color: var(--wp--preset--color--contrast-2, #6b6a63);
+	margin: 0;
+}
+.pc-rating-thanks { color: #1f6b47; }
+
+@media (max-width: 600px) {
+	.pc-rating-row {
+		grid-template-columns: minmax(0, 1fr) auto;
+	}
+	.pc-rating-crit-score { grid-column: 2; text-align: left; }
+}
+
+/* Promo code box (partner-catalog/promo). */
+.pc-promo {
+	border: 1px dashed #d9a95c;
+	background: #fdf8f0;
+	border-radius: 10px;
+	padding: 14px 16px;
+	margin-bottom: 16px;
+}
+.pc-promo-title {
+	font-size: 12px;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: #8a5a1b;
+	margin: 0 0 6px;
+}
+.pc-promo-desc { font-size: 13.5px; margin: 0 0 10px; }
+.pc-promo-code-row {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+.pc-promo-code {
+	font-size: 16px;
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	background: #fff;
+	border: 1px solid #e6d2ae;
+	border-radius: 6px;
+	padding: 5px 12px;
+	user-select: all;
+}
+.pc-promo-copy {
+	background: none;
+	border: 1px solid #d9a95c;
+	border-radius: 999px;
+	color: #8a5a1b;
+	font-size: 12.5px;
+	padding: 5px 12px;
+	cursor: pointer;
+}
+.pc-promo-copy.is-copied { background: #e3f3ea; border-color: #1f6b47; color: #1f6b47; }
+.pc-promo-note {
+	font-size: 12px;
+	color: var(--wp--preset--color--contrast-2, #6b6a63);
+	margin: 8px 0 0;
+}
+.pc-promo-cta { margin: 10px 0 0; font-size: 13.5px; }
+
+/* FAQ (partner-catalog/faq) — native <details>, no script. */
+.pc-faq { margin-top: 24px; }
+.pc-faq-heading { margin-bottom: 10px; }
+.pc-faq-item {
+	border-bottom: 1px solid var(--wp--preset--color--light, #e3e2dd);
+	padding: 10px 0;
+}
+.pc-faq-q {
+	cursor: pointer;
+	font-weight: 600;
+	font-size: 14.5px;
+	list-style: none;
+}
+.pc-faq-q::marker,
+.pc-faq-q::-webkit-details-marker { display: none; }
+.pc-faq-q::before {
+	content: "+";
+	display: inline-block;
+	width: 1em;
+	color: var(--wp--preset--color--accent, #2f5d4f);
+}
+.pc-faq-item[open] .pc-faq-q::before { content: "−"; }
+.pc-faq-a {
+	font-size: 13.5px;
+	color: var(--wp--preset--color--contrast-2, #6b6a63);
+	padding: 6px 0 2px 1em;
+}
 
 /* Own related-posts block (partner-catalog/related-posts) — replaces
  * Contextual Related Posts' unstyled default output. */
@@ -168,6 +329,26 @@
 /* partner-catalog/contractor-filters — own archive filter form (replaces
  * Filter Everything, see class-pc-filters.php). Plain GET form, no JS
  * framework, so the styling only needs to cover native form elements. */
+.pc-filter-sort {
+	display: grid;
+	gap: 4px;
+	margin-bottom: 14px;
+}
+.pc-filter-sort label {
+	font-size: 11.5px;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--wp--preset--color--contrast-2, #6b6a63);
+}
+.pc-filter-sort select {
+	width: 100%;
+	font-size: 13px;
+	padding: 5px 8px;
+	border: 1px solid var(--wp--preset--color--light, #e3e2dd);
+	border-radius: 6px;
+	background: var(--wp--preset--color--base, #fff);
+}
+
 .pc-filters {
 	display: flex;
 	flex-direction: column;

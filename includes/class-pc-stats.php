@@ -82,7 +82,7 @@ class PC_Stats {
 		}
 
 		$tax_query = array();
-		foreach ( array( 'contractor_type', 'contractor_specialization', 'contractor_region' ) as $taxonomy ) {
+		foreach ( array( 'contractor_type', 'contractor_specialization' ) as $taxonomy ) {
 			if ( ! empty( $filters[ $taxonomy ] ) ) {
 				$tax_query[] = array(
 					'taxonomy' => $taxonomy,

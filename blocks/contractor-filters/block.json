@@ -4,7 +4,7 @@
 	"name": "partner-catalog/contractor-filters",
 	"title": "Фильтры подрядчиков",
 	"category": "widgets",
-	"description": "Собственный виджет фильтрации архива по типу/специализации/региону (заменяет Filter Everything) — обычная GET-форма, без AJAX и сторонних скриптов.",
+	"description": "Собственный виджет фильтрации архива: сортировка, тип, специализация и условия использования (бесплатно / бесплатный тариф / пробный период / промокод). Обычная GET-форма, без AJAX и сторонних скриптов.",
 	"textdomain": "partner-catalog",
 	"supports": { "html": false, "className": true },
 	"render": "file:./render.php",

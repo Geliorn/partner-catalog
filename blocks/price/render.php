@@ -24,6 +24,19 @@ if ( empty( $type ) ) {
 }
 
 switch ( $type ) {
+	case 'free':
+		$text = 'Бесплатно';
+		break;
+	case 'subscription':
+		// The value may already carry its own unit ("990 ₽/мес" typed by hand
+		// for an odd plan), so only a bare number gets the suffix added.
+		$text = '' !== $value
+			? ( preg_match( '/^[\d\s\xC2\xA0.,–-]+$/', $value ) ? $value . ' ₽/мес' : $value )
+			: '';
+		break;
+	case 'usage':
+		$text = '' !== $value ? $value : 'Оплата по потреблению';
+		break;
 	case 'from':
 		$text = '' !== $value ? 'от ' . $value . ' ₽' : '';
 		break;

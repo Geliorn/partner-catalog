@@ -24,6 +24,9 @@ class PC_Blocks {
 		register_block_type( PC_PLUGIN_DIR . 'blocks/rating' );
 		register_block_type( PC_PLUGIN_DIR . 'blocks/related-posts' );
 		register_block_type( PC_PLUGIN_DIR . 'blocks/contractor-filters' );
+		register_block_type( PC_PLUGIN_DIR . 'blocks/badges' );
+		register_block_type( PC_PLUGIN_DIR . 'blocks/promo' );
+		register_block_type( PC_PLUGIN_DIR . 'blocks/faq' );
 	}
 
 	/**

@@ -97,16 +97,26 @@ PROMPT;
 			'title'        => get_the_title( $post_id ),
 			'types'        => $terms( 'contractor_type' ),
 			'specs'        => $terms( 'contractor_specialization' ),
-			'regions'      => $terms( 'contractor_region' ),
 			'website'      => (string) get_post_meta( $post_id, '_pc_website', true ),
 			'features'     => (string) get_post_meta( $post_id, '_pc_features', true ),
 			'partnership'  => (string) get_post_meta( $post_id, '_pc_partnership', true ),
 			'clients'      => (string) get_post_meta( $post_id, '_pc_clients', true ),
-			'team_size'    => (string) get_post_meta( $post_id, '_pc_team_size', true ),
 			'founded_year' => (string) get_post_meta( $post_id, '_pc_founded_year', true ),
 			'price_type'   => (string) get_post_meta( $post_id, '_pc_price_type', true ),
 			'price_value'  => (string) get_post_meta( $post_id, '_pc_price_value', true ),
+			'conditions'   => self::condition_labels( $post_id ),
 		);
+	}
+
+	/** Human-readable usage flags, so the generated description can mention them. */
+	private static function condition_labels( $post_id ) {
+		$labels = array();
+		foreach ( PC_Meta_Fields::flags() as $meta_key => $label ) {
+			if ( '1' === (string) get_post_meta( $post_id, $meta_key, true ) ) {
+				$labels[] = $label;
+			}
+		}
+		return $labels;
 	}
 
 	/** Call the model and parse the JSON; null on failure. */
@@ -145,16 +155,15 @@ PROMPT;
 			return '' !== $v ? str_replace( array( "\r\n", "\n" ), '; ', $v ) : '—';
 		};
 		return sprintf(
-			"Название: %s\nТип услуг: %s\nСпециализация: %s\nРегион: %s\nСайт: %s\nГод основания: %s\nРазмер команды: %s\nЦена: %s %s\nОсобенности: %s\nПартнёрства/сертификаты: %s\nКлючевые клиенты: %s",
+			"Название: %s\nТип услуг: %s\nСпециализация: %s\nСайт: %s\nГод основания: %s\nЦена: %s %s\nУсловия: %s\nОсобенности: %s\nПартнёрства/сертификаты: %s\nКлючевые клиенты: %s",
 			$list( $d['title'] ),
 			$list( $d['types'] ),
 			$list( $d['specs'] ),
-			$list( $d['regions'] ),
 			$list( $d['website'] ),
 			$list( $d['founded_year'] ),
-			$list( $d['team_size'] ),
 			$list( $d['price_type'] ),
 			$list( $d['price_value'] ),
+			$list( $d['conditions'] ?? array() ),
 			$list( $d['features'] ),
 			$list( $d['partnership'] ),
 			$list( $d['clients'] )

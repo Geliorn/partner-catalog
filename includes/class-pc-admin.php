@@ -104,6 +104,7 @@ class PC_Admin {
 					<tr><th>Рейтинг сайта</th><td><label><input type="checkbox" name="integration_ratings" value="1" <?php checked( $s['integration_ratings'] ); ?>> показывать рейтинг (♡) в паттернах — свой виджет, без стороннего плагина</label></td></tr>
 					<tr><th>Похожие подрядчики</th><td><label><input type="checkbox" name="integration_related_posts" value="1" <?php checked( $s['integration_related_posts'] ); ?>> блок «Похожие подрядчики» на странице записи — свой код по типу/специализации, без стороннего плагина</label></td></tr>
 					<tr><th>Фильтры архива</th><td><label><input type="checkbox" name="integration_filters" value="1" <?php checked( $s['integration_filters'] ); ?>> боковая панель фильтров на архиве (partner-catalog/contractor-filters) — свой код, без стороннего плагина</label></td></tr>
+					<tr><th>Разметка schema.org</th><td><label><input type="checkbox" name="integration_schema" value="1" <?php checked( $s['integration_schema'] ); ?>> JSON-LD на странице подрядчика (рейтинг, цена, FAQ)</label><p class="description">Выключите, если SEO-плагин уже сам формирует разметку для типа записи «Подрядчик» — две разные схемы на одном URL хуже одной.</p></td></tr>
 				</table>
 
 				<h2>AI-описания поставщиков</h2>
@@ -169,7 +170,7 @@ class PC_Admin {
 			wp_die( 'Недостаточно прав.' );
 		}
 
-		$checkboxes  = array( 'integration_ratings', 'integration_related_posts', 'integration_filters' );
+		$checkboxes  = array( 'integration_ratings', 'integration_related_posts', 'integration_filters', 'integration_schema' );
 		$text_fields = array(
 			'utm_source', 'utm_medium', 'utm_campaign_template', 'utm_content_template', 'metrika_counter_id', 'seo_plugin',
 			'ai_provider', 'deepseek_api_key', 'deepseek_model', 'qwen_api_key', 'qwen_model', 'qwen_base_url',
@@ -266,7 +267,6 @@ class PC_Admin {
 			'contractor_id'             => isset( $_GET['contractor_id'] ) ? absint( $_GET['contractor_id'] ) : 0,
 			'contractor_type'           => isset( $_GET['contractor_type'] ) ? absint( $_GET['contractor_type'] ) : 0,
 			'contractor_specialization' => isset( $_GET['contractor_specialization'] ) ? absint( $_GET['contractor_specialization'] ) : 0,
-			'contractor_region'         => isset( $_GET['contractor_region'] ) ? absint( $_GET['contractor_region'] ) : 0,
 		);
 	}
 
@@ -291,7 +291,6 @@ class PC_Admin {
 				<label>По <input type="date" name="date_to" value="<?php echo esc_attr( $filters['date_to'] ); ?>"></label>
 				<?php self::render_term_select( 'contractor_type', 'Тип сервиса', $filters['contractor_type'] ); ?>
 				<?php self::render_term_select( 'contractor_specialization', 'Специализация', $filters['contractor_specialization'] ); ?>
-				<?php self::render_term_select( 'contractor_region', 'Регион', $filters['contractor_region'] ); ?>
 				<?php self::render_contractor_select( $filters['contractor_id'] ); ?>
 				<button class="button button-primary">Показать</button>
 			</form>

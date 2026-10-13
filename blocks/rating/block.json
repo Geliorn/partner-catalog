@@ -4,7 +4,7 @@
 	"name": "partner-catalog/rating",
 	"title": "Рейтинг подрядчика",
 	"category": "widgets",
-	"description": "Собственный рейтинговый виджет (заменяет WP-PostRatings) — клик по сердечку голосует через AJAX, один голос на браузер.",
+	"description": "Собственный рейтинговый виджет (заменяет WP-PostRatings) — оценки по нескольким критериям, каждая по 5-балльной шкале, без текста отзыва. Один голос на браузер.",
 	"textdomain": "partner-catalog",
 	"attributes": {
 		"size": { "type": "string", "default": "small" },

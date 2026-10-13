@@ -46,6 +46,7 @@ class PC_Settings {
 			'integration_ratings'       => 1, // own rating widget (partner-catalog/rating)
 			'integration_related_posts' => 1, // own related-posts block (partner-catalog/related-posts)
 			'integration_filters'       => 1, // own archive sidebar filters (partner-catalog/contractor-filters) — replaced Filter Everything 2026-09-29
+			'integration_schema'        => 1, // JSON-LD on the single page (class-pc-schema.php) — off if an SEO plugin already emits its own graph for `contractor`
 		);
 	}
 

@@ -5,7 +5,7 @@
 	blocks.registerBlockType( 'partner-catalog/rating', {
 		edit: function() {
 			var blockProps = blockEditor.useBlockProps();
-			return el( 'p', blockProps, el( 'em', null, '♡ Рейтинг подрядчика (собственный виджет, голосование — на реальной странице)' ) );
+			return el( 'p', blockProps, el( 'em', null, '♡ Рейтинг подрядчика по критериям (собственный виджет, голосование — на реальной странице)' ) );
 		},
 		save: function() {
 			return null;

@@ -71,18 +71,15 @@ class PC_CPT {
 			)
 		);
 
-		register_taxonomy(
-			'contractor_region',
-			array( 'contractor' ),
-			array(
-				'label'             => 'Регион',
-				'hierarchical'      => false,
-				'public'            => true,
-				'show_in_rest'      => true,
-				'show_admin_column' => true,
-				'rewrite'           => array( 'slug' => 'region' ),
-			)
-		);
+		// contractor_region was registered here until 0.4.0 and is deliberately
+		// gone: the catalog turned out to be about AI services/platforms, where
+		// "region of presence" is meaningless (an API aggregator has none), and
+		// in practice every region facet held 1-2 records — the same long-tail
+		// noise the tag cleanup is about. Removed on the user's call 2026-10-13,
+		// revising section 3 of docs/partner-catalog-plan.md (which argued for it
+		// from workspace.ru — but that is a catalog of *agencies*, not services).
+		// Any terms already assigned stay in the DB, simply unregistered; delete
+		// them by hand if you want them gone.
 	}
 
 	const TERMS_SEEDED_OPTION = 'pc_terms_seeded';
@@ -101,7 +98,6 @@ class PC_CPT {
 		$terms = array(
 			'contractor_type'           => array( 'Интегратор', 'Дистрибьютор', 'Хостинг-провайдер', 'Облачная платформа', 'Разработчик ПО', 'Учебный центр', 'Консалтинг', 'Сопутствующий сервис' ),
 			'contractor_specialization' => array( '1С', 'Bitrix24', 'Microsoft 365', 'AWS', 'Yandex Cloud', 'MCP/AI-агенты', 'VMware' ),
-			'contractor_region'         => array( 'Москва', 'Санкт-Петербург', 'Екатеринбург', 'Новосибирск', 'Казань', 'Удалённо' ),
 		);
 
 		foreach ( $terms as $taxonomy => $names ) {

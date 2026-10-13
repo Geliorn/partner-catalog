@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Partner Catalog
  * Description: Каталог подрядчиков и сервис-провайдеров (интеграторы, дистрибьюторы, хостинги, облачные платформы и т.д.) с ручным наполнением карточек. Без парсинга/сборщика — самодостаточен, не зависит от ACF/CPT UI.
- * Version: 0.3.0
+ * Version: 0.4.0
  * Author: llm-agent.ru
  * Text Domain: partner-catalog
  */
@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'PC_VERSION', '0.3.0' );
+define( 'PC_VERSION', '0.4.0' );
 define( 'PC_PLUGIN_FILE', __FILE__ );
 define( 'PC_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'PC_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -20,6 +20,7 @@ require_once PC_PLUGIN_DIR . 'includes/class-pc-cpt.php';
 require_once PC_PLUGIN_DIR . 'includes/class-pc-meta-fields.php';
 require_once PC_PLUGIN_DIR . 'includes/class-pc-settings.php';
 require_once PC_PLUGIN_DIR . 'includes/class-pc-seo.php';
+require_once PC_PLUGIN_DIR . 'includes/class-pc-schema.php';
 require_once PC_PLUGIN_DIR . 'includes/class-pc-stats.php';
 require_once PC_PLUGIN_DIR . 'includes/class-pc-links.php';
 require_once PC_PLUGIN_DIR . 'includes/class-pc-ratings.php';
@@ -38,6 +39,7 @@ function pc_boot() {
 	PC_CPT::init();
 	PC_Meta_Fields::init();
 	PC_Settings::init();
+	PC_Schema::init();
 	PC_Stats::init();
 	PC_Links::init();
 	PC_Ratings::init();
