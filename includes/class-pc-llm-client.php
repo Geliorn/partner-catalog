@@ -99,9 +99,7 @@ PROMPT;
 			'specs'        => $terms( 'contractor_specialization' ),
 			'website'      => (string) get_post_meta( $post_id, '_pc_website', true ),
 			'features'     => (string) get_post_meta( $post_id, '_pc_features', true ),
-			'partnership'  => (string) get_post_meta( $post_id, '_pc_partnership', true ),
 			'clients'      => (string) get_post_meta( $post_id, '_pc_clients', true ),
-			'founded_year' => (string) get_post_meta( $post_id, '_pc_founded_year', true ),
 			'price_type'   => (string) get_post_meta( $post_id, '_pc_price_type', true ),
 			'price_value'  => (string) get_post_meta( $post_id, '_pc_price_value', true ),
 			'conditions'   => self::condition_labels( $post_id ),
@@ -155,17 +153,15 @@ PROMPT;
 			return '' !== $v ? str_replace( array( "\r\n", "\n" ), '; ', $v ) : '—';
 		};
 		return sprintf(
-			"Название: %s\nТип услуг: %s\nСпециализация: %s\nСайт: %s\nГод основания: %s\nЦена: %s %s\nУсловия: %s\nОсобенности: %s\nПартнёрства/сертификаты: %s\nКлючевые клиенты: %s",
+			"Название: %s\nТип услуг: %s\nСпециализация: %s\nСайт: %s\nЦена: %s %s\nУсловия: %s\nОсобенности: %s\nКлючевые клиенты: %s",
 			$list( $d['title'] ),
 			$list( $d['types'] ),
 			$list( $d['specs'] ),
 			$list( $d['website'] ),
-			$list( $d['founded_year'] ),
 			$list( $d['price_type'] ),
 			$list( $d['price_value'] ),
 			$list( $d['conditions'] ?? array() ),
 			$list( $d['features'] ),
-			$list( $d['partnership'] ),
 			$list( $d['clients'] )
 		);
 	}

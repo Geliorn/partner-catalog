@@ -113,22 +113,31 @@
 .pc-single-header { gap: 16px; }
 .pc-logo-lg img, .pc-logo img { border-radius: 8px; }
 
-.pc-stats-row {
-	gap: 22px;
-	padding: 14px 0;
-	margin: 16px 0;
-	border-top: 1px solid var(--wp--preset--color--light, #e3e2dd);
-	border-bottom: 1px solid var(--wp--preset--color--light, #e3e2dd);
-}
+/* Single page: price sits right above the CTA in the header. */
+.pc-single-cta { gap: 8px; align-items: flex-end; }
+.pc-single-cta .pc-price { margin: 0; }
 
-.pc-side-box {
-	background: var(--wp--preset--color--base-2, #f7f7f5);
-	border: 1px solid var(--wp--preset--color--light, #e3e2dd);
-	border-radius: 6px;
-	padding: 16px;
-}
+.pc-single-body { margin-top: 20px; }
 
-.pc-social-btn { margin-right: 6px; }
+/* Sidebar: promo code + the 5-criteria rating form, sticky on desktop so
+ * the form stays in view while reading the description. */
+.pc-single-aside {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+@media (min-width: 782px) {
+	.pc-single-aside { align-self: flex-start; position: sticky; top: 24px; }
+}
+.pc-single-aside h4 { margin: 0; }
+/* The column is ~1/3 wide: the criterion label gets its own line, with the
+ * hearts and the current score underneath, instead of being squeezed. */
+.pc-single-aside .pc-rating-row {
+	grid-template-columns: auto 2.6em;
+	row-gap: 2px;
+}
+.pc-single-aside .pc-rating-label { grid-column: 1 / -1; }
+.pc-single-aside .pc-rating-stars { justify-self: start; }
 
 /* Own rating widget (partner-catalog/rating) — replaces WP-PostRatings. */
 .pc-rating {

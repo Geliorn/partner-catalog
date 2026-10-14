@@ -104,11 +104,6 @@ class PC_Schema {
 			$entity['keywords'] = implode( ', ', $specs );
 		}
 
-		$founded = (int) get_post_meta( $post_id, '_pc_founded_year', true );
-		if ( $founded >= 1900 && 'Organization' === $schema_type ) {
-			$entity['foundingDate'] = (string) $founded;
-		}
-
 		$offer = self::offer( $post_id );
 		if ( $offer ) {
 			$entity['offers'] = $offer;

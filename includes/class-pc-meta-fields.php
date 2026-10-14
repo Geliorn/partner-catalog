@@ -6,10 +6,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Registers post meta (register_post_meta -> show_in_rest, needed for Block
  * Bindings in patterns) and renders the plain-PHP meta box for `contractor`.
- * No ACF dependency, no repeater UI — contacts are a small fixed set of
- * common fields (phone/email/Telegram/VK) rather than a generic repeater,
- * to stay consistent with the rest of the stack (llm-agent-github-repos has
- * no repeater fields either) and keep manual entry simple.
+ * No ACF dependency, no repeater UI — consistent with the rest of the stack
+ * (llm-agent-github-repos has no repeater fields either). Contacts
+ * (phone/email/Telegram/VK), partnerships and founded year were removed in
+ * 0.4.0: the catalog lists services, the visitor's way to them is the
+ * tracked "Перейти на сайт" link, and none of these fields was filled
+ * consistently enough to be worth a slot on the page.
  */
 class PC_Meta_Fields {
 
@@ -64,15 +66,9 @@ class PC_Meta_Fields {
 		return array(
 			'_pc_short_description' => 'string',
 			'_pc_website'           => 'string',
-			'_pc_phone'             => 'string',
-			'_pc_email'             => 'string',
-			'_pc_telegram'          => 'string',
-			'_pc_vk'                => 'string',
 			'_pc_price_type'        => 'string',
 			'_pc_price_value'       => 'string',
 			'_pc_features'          => 'string',
-			'_pc_partnership'       => 'string',
-			'_pc_founded_year'      => 'integer',
 			'_pc_clients'           => 'string',
 			'_pc_utm_override'      => 'string',
 			// Promo code (PC_Promo + partner-catalog/promo block).
@@ -201,14 +197,6 @@ class PC_Meta_Fields {
 
 		self::field( $post->ID, '_pc_website', 'Сайт', 'url' );
 
-		echo '<h3>Контакты</h3>';
-		echo '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 24px">';
-		self::field( $post->ID, '_pc_phone', 'Телефон', 'text' );
-		self::field( $post->ID, '_pc_email', 'Email', 'email' );
-		self::field( $post->ID, '_pc_telegram', 'Telegram (ссылка)', 'url' );
-		self::field( $post->ID, '_pc_vk', 'VK (ссылка)', 'url' );
-		echo '</div>';
-
 		echo '<h3>Стоимость услуг</h3>';
 		echo '<div style="display:flex;gap:12px;align-items:flex-start">';
 		self::field( $post->ID, '_pc_price_type', 'Тип цены', 'select', array( 'choices' => self::price_types() ) );
@@ -243,9 +231,7 @@ class PC_Meta_Fields {
 		);
 
 		echo '<h3>Дополнительно</h3>';
-		self::field( $post->ID, '_pc_founded_year', 'Год основания', 'number' );
 		self::field( $post->ID, '_pc_schema_type', 'Тип в разметке schema.org', 'select', array( 'choices' => self::schema_types() ) );
-		self::field( $post->ID, '_pc_partnership', 'Партнёрства и сертификации (каждая — с новой строки)', 'textarea', array( 'rows' => 2, 'description' => 'Например: «Официальный партнёр 1С», «Microsoft Gold Partner».' ) );
 		self::field( $post->ID, '_pc_features', 'Особенности сервиса (тезисно, каждая мысль — с новой строки; на карточке/странице выводится немаркированным списком)', 'textarea', array( 'rows' => 5, 'description' => 'Например: «Работаем 24/7», «Бесплатный аудит перед стартом», «Фиксированная цена без доплат».' ) );
 		self::field( $post->ID, '_pc_clients', 'Ключевые клиенты (каждый — с новой строки)', 'textarea', array( 'rows' => 3 ) );
 
@@ -267,8 +253,8 @@ class PC_Meta_Fields {
 			return;
 		}
 
-		$textareas    = array( '_pc_short_description', '_pc_partnership', '_pc_features', '_pc_clients', '_pc_faq' );
-		$urls         = array( '_pc_website', '_pc_telegram', '_pc_vk' );
+		$textareas    = array( '_pc_short_description', '_pc_features', '_pc_clients', '_pc_faq' );
+		$urls         = array( '_pc_website' );
 		$price_types  = array_keys( self::price_types() );
 		$schema_types = array_keys( self::schema_types() );
 
@@ -293,8 +279,6 @@ class PC_Meta_Fields {
 				update_post_meta( $post_id, $key, sanitize_textarea_field( $raw ) );
 			} elseif ( in_array( $key, $urls, true ) ) {
 				update_post_meta( $post_id, $key, esc_url_raw( $raw ) );
-			} elseif ( '_pc_email' === $key ) {
-				update_post_meta( $post_id, $key, sanitize_email( $raw ) );
 			} elseif ( '_pc_price_type' === $key ) {
 				update_post_meta( $post_id, $key, in_array( $raw, $price_types, true ) ? $raw : '' );
 			} elseif ( '_pc_schema_type' === $key ) {

@@ -9,8 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * (per the chosen workflow); descriptions can be AI-generated afterwards.
  *
  * CSV: UTF-8, first row = header. Delimiter auto-detected (, ; or tab). A cell
- * holding several values (type, specialization, features, partnership,
- * clients, faq) separates them with a vertical bar «|».
+ * holding several values (type, specialization, features, clients, faq) separates them with a vertical bar «|».
  */
 class PC_Import {
 
@@ -21,13 +20,8 @@ class PC_Import {
 		return array(
 			'short_description' => '_pc_short_description',
 			'website'           => '_pc_website',
-			'phone'             => '_pc_phone',
-			'email'             => '_pc_email',
-			'telegram'          => '_pc_telegram',
-			'vk'                => '_pc_vk',
 			'price_type'        => '_pc_price_type',
 			'price_value'       => '_pc_price_value',
-			'founded_year'      => '_pc_founded_year',
 			'promo_code'        => '_pc_promo_code',
 			'promo_description' => '_pc_promo_description',
 			'promo_expires'     => '_pc_promo_expires',
@@ -52,9 +46,8 @@ class PC_Import {
 	/** header column => meta key (multi-line «|»-separated → newline). */
 	private static function multiline_columns() {
 		return array(
-			'features'    => '_pc_features',
-			'partnership' => '_pc_partnership',
-			'clients'     => '_pc_clients',
+			'features' => '_pc_features',
+			'clients'  => '_pc_clients',
 		);
 	}
 
@@ -111,19 +104,18 @@ class PC_Import {
 				<div class="notice notice-error"><p><?php echo esc_html( wp_unslash( $_GET['import_error'] ) ); ?></p></div>
 			<?php endif; ?>
 
-			<p>Файл: <strong>UTF-8 CSV</strong>, первая строка — заголовки. Разделитель столбцов определяется автоматически (<code>,</code>, <code>;</code> или табуляция). Если в ячейке несколько значений (тип, специализация, особенности, партнёрства, клиенты, FAQ) — разделяйте их вертикальной чертой «<code>|</code>».</p>
+			<p>Файл: <strong>UTF-8 CSV</strong>, первая строка — заголовки. Разделитель столбцов определяется автоматически (<code>,</code>, <code>;</code> или табуляция). Если в ячейке несколько значений (тип, специализация, особенности, клиенты, FAQ) — разделяйте их вертикальной чертой «<code>|</code>».</p>
 			<p><a class="button" href="<?php echo esc_url( $sample_url ); ?>">Скачать образец CSV</a></p>
 
 			<h2>Столбцы</h2>
 			<p class="description" style="max-width:820px">
-				<code>title</code> (обязательно) — название; <code>short_description</code>; <code>website</code>; <code>phone</code>; <code>email</code>; <code>telegram</code>; <code>vk</code>;
+				<code>title</code> (обязательно) — название; <code>short_description</code>; <code>website</code>;
 				<code>price_type</code> (<?php echo esc_html( implode( ' | ', array_keys( PC_Meta_Fields::price_types() ) ) ); ?>); <code>price_value</code>;
-				<code>founded_year</code>;
 				<code>promo_code</code>, <code>promo_description</code>, <code>promo_expires</code>, <code>promo_checked</code> (даты — <code>ГГГГ-ММ-ДД</code>);
 				<code><?php echo esc_html( implode( '</code>, <code>', array_keys( self::flag_columns() ) ) ); ?></code> — условия, «1» / «да» = включено;
-				<code>features</code>, <code>partnership</code>, <code>clients</code> (несколько пунктов через «|»);
+				<code>features</code>, <code>clients</code> (несколько пунктов через «|»);
 				<code>faq</code> — пары «вопрос <code>::</code> ответ», сами пары через «|»;
-				<code>type</code>, <code>specialization</code> (термины через «|», создаются при необходимости).
+				<code>type</code> — тип сервиса (таксономия <code>contractor_type</code>), <code>specialization</code> — специализация (<code>contractor_specialization</code>); термины через «|», создаются при необходимости.
 			</p>
 
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" enctype="multipart/form-data">
@@ -153,26 +145,21 @@ class PC_Import {
 			'ООО «Пример Интеграции»',
 			'Внедряем 1С и Bitrix24 для среднего бизнеса.',
 			'https://example.com',
-			'+7 495 000-00-00',
-			'info@example.com',
-			'https://t.me/example',
-			'https://vk.com/example',
-			'from', '150000', '2014',
+			'from', '150000',
 			'', '', '', '',
 			'', '', 'да',
 			'Работаем 24/7|Фиксированная цена|Бесплатный аудит',
-			'Официальный партнёр 1С|Microsoft Gold Partner',
 			'X5 Retail Group|Сбер',
 			'Нужен ли VPN? :: Нет, сервис работает с российских IP.|Как оплатить? :: Картой РФ или по счёту для юрлиц.',
 			'Интегратор|Консалтинг',
 			'1С|Bitrix24',
 		) );
 		fputcsv( $out, array(
-			'Cloud Hosting Pro', 'Облачный хостинг и администрирование.', 'https://cloudpro.example', '', 'sales@cloudpro.example', '', '',
-			'subscription', '990', '2019',
+			'Cloud Hosting Pro', 'Облачный хостинг и администрирование.', 'https://cloudpro.example',
+			'subscription', '990',
 			'CLOUD10', 'Скидка 10% на первый месяц', '2026-12-31', '2026-10-13',
 			'', 'да', 'да',
-			'SLA 99.9%|Поддержка на русском', '', '',
+			'SLA 99.9%|Поддержка на русском', '',
 			'',
 			'Хостинг-провайдер', 'AWS|Yandex Cloud',
 		) );
@@ -278,14 +265,10 @@ class PC_Import {
 				continue;
 			}
 			$val = trim( (string) $row[ $col ] );
-			if ( in_array( $key, array( '_pc_website', '_pc_telegram', '_pc_vk' ), true ) ) {
+			if ( '_pc_website' === $key ) {
 				$val = esc_url_raw( $val );
-			} elseif ( '_pc_email' === $key ) {
-				$val = sanitize_email( $val );
 			} elseif ( '_pc_price_type' === $key ) {
 				$val = in_array( $val, $price_types, true ) ? $val : '';
-			} elseif ( '_pc_founded_year' === $key ) {
-				$val = absint( $val );
 			} elseif ( in_array( $key, array( '_pc_promo_expires', '_pc_promo_checked' ), true ) ) {
 				$val = preg_match( '/^\d{4}-\d{2}-\d{2}$/', $val ) ? $val : '';
 			} else {

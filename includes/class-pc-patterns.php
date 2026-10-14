@@ -71,7 +71,7 @@ class PC_Patterns {
 			'partner-catalog/single-layout',
 			array(
 				'title'       => 'Подрядчик: страница записи',
-				'description' => 'Полная разметка одиночной записи contractor — шапка, рейтинг, статистика, описание + боковая колонка контактов, похожие записи.',
+				'description' => 'Полная разметка одиночной записи contractor — шапка с ценой и кнопкой перехода, описание + боковая колонка (промокод, оценка по 5 критериям), похожие записи.',
 				'categories'  => array( self::CATEGORY ),
 				'content'     => self::single_layout_markup(),
 			)
@@ -96,8 +96,8 @@ class PC_Patterns {
 	/**
 	 * $outbound = true only for the tracked "Перейти на сайт" CTA (bound to the
 	 * virtual _pc_outbound_url) — it alone gets the pc-outbound-link class that
-	 * assets/js/pc-analytics.js listens for. Telegram/VK buttons bind straight
-	 * to their own real meta and are NOT part of the /out/ click-tracking flow.
+	 * assets/js/pc-analytics.js listens for. Any other bound button links
+	 * straight to its own meta and is NOT part of the /out/ click-tracking flow.
 	 */
 	private static function bound_button( $meta_key, $label, $class = '', $outbound = false ) {
 		$attrs = array(
@@ -153,26 +153,6 @@ class PC_Patterns {
 		return '<!-- wp:heading {"level":3} --><h3>Похожие подрядчики</h3><!-- /wp:heading --><!-- wp:partner-catalog/related-posts /-->';
 	}
 
-	private static function static_paragraph( $text, $font_size = 'small' ) {
-		return sprintf(
-			'<!-- wp:paragraph {"fontSize":"%1$s"} --><p class="has-%1$s-font-size">%2$s</p><!-- /wp:paragraph -->',
-			esc_attr( $font_size ),
-			esc_html( $text )
-		);
-	}
-
-	/**
-	 * A bound_paragraph's "placeholder" only shows in the editor as an empty-state
-	 * fallback — it is NOT a live front-end caption. The stats row needs a real
-	 * caption under each number (see the approved single mockup), so this wraps
-	 * the value with a second, always-visible static label underneath.
-	 */
-	private static function labeled_stat( $value_markup, $label ) {
-		return '<!-- wp:group {"className":"pc-stat","layout":{"type":"flex","orientation":"vertical","flexWrap":"nowrap"}} --><div class="wp-block-group pc-stat">'
-			. $value_markup
-			. self::static_paragraph( $label, 'small' )
-			. '</div><!-- /wp:group -->';
-	}
 
 	private static function meta_list( $meta_key, $style = 'bullet', $class = '' ) {
 		$attrs           = array(
@@ -215,11 +195,9 @@ class PC_Patterns {
 
 ' . $ratings . '
 
-<!-- wp:partner-catalog/price /-->
-
 <!-- wp:group {"className":"pc-card-foot","layout":{"type":"flex","justifyContent":"space-between"}} -->
 <div class="wp-block-group pc-card-foot">
-' . self::meta_list( '_pc_partnership', 'badges', 'pc-partnership-badge' ) . '
+<!-- wp:partner-catalog/price /-->
 <!-- wp:read-more {"content":"Подробнее →","fontSize":"small","textColor":"contrast","style":{"border":{"radius":"999px","width":"1px","color":"var:preset|color|light"},"spacing":{"padding":{"top":"0.35em","bottom":"0.35em","left":"1em","right":"1em"}},"typography":{"textDecoration":"none"}}} /-->
 </div>
 <!-- /wp:group -->
@@ -268,6 +246,13 @@ class PC_Patterns {
 		$ratings = self::ratings_block( 'pc-single-rating' );
 		$related = self::related_posts_block();
 
+		// The sidebar holds the 5-criteria rating form (PC_Ratings::criteria())
+		// next to the promo code — it replaced the contacts box removed in
+		// 0.4.0, and price moved up next to the CTA, so the stats row went too.
+		$rating_box = $ratings
+			? '<!-- wp:heading {"level":4} --><h4>Оценка пользователей</h4><!-- /wp:heading -->' . "\n" . $ratings
+			: '';
+
 		return '<!-- wp:group {"className":"pc-single-header","layout":{"type":"flex","flexWrap":"wrap","justifyContent":"space-between"}} -->
 <div class="wp-block-group pc-single-header">
 <!-- wp:group {"layout":{"type":"flex","flexWrap":"nowrap"}} -->
@@ -284,26 +269,17 @@ class PC_Patterns {
 </div>
 <!-- /wp:group -->
 
-<!-- wp:group {"layout":{"type":"flex","orientation":"vertical","justifyContent":"right"}} -->
-<div class="wp-block-group">
-' . self::meta_list( '_pc_partnership', 'badges', 'pc-partnership-badge' ) . '
+<!-- wp:group {"className":"pc-single-cta","layout":{"type":"flex","orientation":"vertical","justifyContent":"right"}} -->
+<div class="wp-block-group pc-single-cta">
+<!-- wp:partner-catalog/price {"fontSize":"medium"} /-->
 ' . self::bound_button( '_pc_outbound_url', 'Перейти на сайт →', 'is-style-fill pc-cta', true ) . '
 </div>
 <!-- /wp:group -->
 </div>
 <!-- /wp:group -->
 
-' . $ratings . '
-
-<!-- wp:group {"className":"pc-stats-row","layout":{"type":"flex","flexWrap":"wrap"}} -->
-<div class="wp-block-group pc-stats-row">
-' . self::labeled_stat( self::bound_paragraph( '_pc_founded_year', '—', 'medium' ), 'год основания' ) . '
-' . self::labeled_stat( '<!-- wp:partner-catalog/price {"fontSize":"medium"} /-->', 'стоимость' ) . '
-</div>
-<!-- /wp:group -->
-
-<!-- wp:columns -->
-<div class="wp-block-columns">
+<!-- wp:columns {"className":"pc-single-body"} -->
+<div class="wp-block-columns pc-single-body">
 <!-- wp:column {"width":"66.66%"} -->
 <div class="wp-block-column" style="flex-basis:66.66%">
 <!-- wp:heading {"level":3} --><h3>О компании</h3><!-- /wp:heading -->
@@ -319,23 +295,11 @@ class PC_Patterns {
 </div>
 <!-- /wp:column -->
 
-<!-- wp:column {"width":"33.33%"} -->
-<div class="wp-block-column" style="flex-basis:33.33%">
+<!-- wp:column {"width":"33.33%","className":"pc-single-aside"} -->
+<div class="wp-block-column pc-single-aside" style="flex-basis:33.33%">
 <!-- wp:partner-catalog/promo /-->
 
-<!-- wp:group {"className":"pc-side-box","layout":{"type":"constrained"}} -->
-<div class="wp-block-group pc-side-box">
-<!-- wp:heading {"level":4} --><h4>Телефон</h4><!-- /wp:heading -->
-' . self::bound_paragraph( '_pc_phone', '—', 'small' ) . '
-
-<!-- wp:heading {"level":4} --><h4>Email</h4><!-- /wp:heading -->
-' . self::bound_paragraph( '_pc_email', '—', 'small' ) . '
-
-<!-- wp:heading {"level":4} --><h4>Соцсети</h4><!-- /wp:heading -->
-' . self::bound_button( '_pc_telegram', 'Telegram', 'is-style-outline pc-social-btn' ) . '
-' . self::bound_button( '_pc_vk', 'VK', 'is-style-outline pc-social-btn' ) . '
-</div>
-<!-- /wp:group -->
+' . $rating_box . '
 </div>
 <!-- /wp:column -->
 </div>
