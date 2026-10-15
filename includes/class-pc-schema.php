@@ -58,17 +58,23 @@ class PC_Schema {
 		return get_permalink( $post_id ) . '#service';
 	}
 
+	/**
+	 * Always Organization (decided 2026-10-15). SoftwareApplication was the
+	 * old default, but Google only shows its rating snippet with a numeric
+	 * offers.price — and most records here are "по запросу"/usage-priced, so
+	 * they lost the stars entirely. Organization needs no price, and a
+	 * third-party catalog rating other companies is not the "self-serving
+	 * review" case Google excludes. The price stays on the page only:
+	 * Organization has no `offers`, and `makesOffer` earns no snippet.
+	 */
 	private static function main_entity( $post_id ) {
 		$types = wp_get_post_terms( $post_id, 'contractor_type', array( 'fields' => 'names' ) );
 		$specs = wp_get_post_terms( $post_id, 'contractor_specialization', array( 'fields' => 'names' ) );
 		$types = is_wp_error( $types ) ? array() : $types;
 		$specs = is_wp_error( $specs ) ? array() : $specs;
 
-		$stored_type = (string) get_post_meta( $post_id, '_pc_schema_type', true );
-		$schema_type = array_key_exists( $stored_type, PC_Meta_Fields::schema_types() ) ? $stored_type : 'SoftwareApplication';
-
 		$entity = array(
-			'@type' => $schema_type,
+			'@type' => 'Organization',
 			'@id'   => self::entity_id( $post_id ),
 			'name'  => get_the_title( $post_id ),
 			'url'   => get_permalink( $post_id ),
@@ -81,8 +87,7 @@ class PC_Schema {
 
 		$image = get_the_post_thumbnail_url( $post_id, 'full' );
 		if ( $image ) {
-			// Organization expects `logo`, SoftwareApplication a plain image.
-			$entity[ 'Organization' === $schema_type ? 'logo' : 'image' ] = $image;
+			$entity['logo'] = $image;
 		}
 
 		// The partner's own site is `sameAs`, never `url` — `url` has to stay
@@ -93,20 +98,9 @@ class PC_Schema {
 			$entity['sameAs'] = array( $website );
 		}
 
-		if ( 'SoftwareApplication' === $schema_type ) {
-			$entity['applicationCategory'] = $types ? implode( ', ' , $types ) : 'BusinessApplication';
-			// Required by Google for a SoftwareApplication result; this is a
-			// catalog of web services, so there is one honest answer.
-			$entity['operatingSystem'] = 'Web';
-		}
-
-		if ( $specs ) {
-			$entity['keywords'] = implode( ', ', $specs );
-		}
-
-		$offer = self::offer( $post_id );
-		if ( $offer ) {
-			$entity['offers'] = $offer;
+		$keywords = array_unique( array_merge( $types, $specs ) );
+		if ( $keywords ) {
+			$entity['keywords'] = implode( ', ', $keywords );
 		}
 
 		$rating = self::aggregate_rating( $post_id );
@@ -118,74 +112,14 @@ class PC_Schema {
 	}
 
 	/**
-	 * Offer/AggregateOffer built from the price type+value pair. Only emitted
-	 * when the value is actually a number: "по запросу" or a usage-based tariff
-	 * has no price to state, and inventing one ("0") would be wrong markup
-	 * rather than merely incomplete markup.
+	 * Only while the rating widget is on: Google requires the rating in the
+	 * markup to be visible on the page, and with the widget switched off old
+	 * votes would still be in the JSON-LD but nowhere on screen.
 	 */
-	private static function offer( $post_id ) {
-		$type  = (string) get_post_meta( $post_id, '_pc_price_type', true );
-		$value = (string) get_post_meta( $post_id, '_pc_price_value', true );
-
-		if ( 'free' === $type ) {
-			return array(
-				'@type'         => 'Offer',
-				'price'         => 0,
-				'priceCurrency' => 'RUB',
-			);
-		}
-
-		if ( 'range' === $type ) {
-			$parts = preg_split( '/[–—-]/u', $value );
-			$low   = self::to_number( $parts[0] ?? '' );
-			$high  = self::to_number( $parts[1] ?? '' );
-			if ( null !== $low && null !== $high ) {
-				return array(
-					'@type'         => 'AggregateOffer',
-					'lowPrice'      => $low,
-					'highPrice'     => $high,
-					'priceCurrency' => 'RUB',
-				);
-			}
+	private static function aggregate_rating( $post_id ) {
+		if ( ! PC_Settings::integration_enabled( 'ratings' ) ) {
 			return array();
 		}
-
-		if ( in_array( $type, array( 'from', 'fixed', 'hourly', 'subscription' ), true ) ) {
-			$number = self::to_number( $value );
-			if ( null === $number ) {
-				return array();
-			}
-			$offer = array(
-				'@type'         => 'Offer',
-				'price'         => $number,
-				'priceCurrency' => 'RUB',
-			);
-			if ( 'subscription' === $type ) {
-				$offer['priceSpecification'] = array(
-					'@type'                => 'UnitPriceSpecification',
-					'price'                => $number,
-					'priceCurrency'        => 'RUB',
-					'billingIncrement'     => 1,
-					'unitCode'             => 'MON',
-				);
-			}
-			return $offer;
-		}
-
-		return array();
-	}
-
-	/** "150 000" / "1 500,50" → float; anything not purely numeric → null. */
-	private static function to_number( $raw ) {
-		$clean = str_replace( array( ' ', "\xC2\xA0", ' ' ), '', (string) $raw );
-		$clean = str_replace( ',', '.', $clean );
-		if ( '' === $clean || ! is_numeric( $clean ) ) {
-			return null;
-		}
-		return (float) $clean;
-	}
-
-	private static function aggregate_rating( $post_id ) {
 		$count = PC_Ratings::get_count( $post_id );
 		if ( $count < 1 ) {
 			return array();

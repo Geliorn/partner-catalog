@@ -53,14 +53,6 @@ class PC_Meta_Fields {
 		);
 	}
 
-	/** Schema.org @type for the single page — see PC_Schema. */
-	public static function schema_types() {
-		return array(
-			'SoftwareApplication' => 'Сервис / ПО (SoftwareApplication) — по умолчанию',
-			'Organization'        => 'Компания (Organization)',
-		);
-	}
-
 	/** Meta keys shown/edited on a contractor post. */
 	public static function meta_keys() {
 		return array(
@@ -78,7 +70,6 @@ class PC_Meta_Fields {
 			'_pc_promo_checked'     => 'string',
 			// Q&A for the partner-catalog/faq block + FAQPage schema.
 			'_pc_faq'               => 'string',
-			'_pc_schema_type'       => 'string',
 		);
 	}
 
@@ -231,7 +222,6 @@ class PC_Meta_Fields {
 		);
 
 		echo '<h3>Дополнительно</h3>';
-		self::field( $post->ID, '_pc_schema_type', 'Тип в разметке schema.org', 'select', array( 'choices' => self::schema_types() ) );
 		self::field( $post->ID, '_pc_features', 'Особенности сервиса (тезисно, каждая мысль — с новой строки; на карточке/странице выводится немаркированным списком)', 'textarea', array( 'rows' => 5, 'description' => 'Например: «Работаем 24/7», «Бесплатный аудит перед стартом», «Фиксированная цена без доплат».' ) );
 		self::field( $post->ID, '_pc_clients', 'Ключевые клиенты (каждый — с новой строки)', 'textarea', array( 'rows' => 3 ) );
 
@@ -256,7 +246,6 @@ class PC_Meta_Fields {
 		$textareas    = array( '_pc_short_description', '_pc_features', '_pc_clients', '_pc_faq' );
 		$urls         = array( '_pc_website' );
 		$price_types  = array_keys( self::price_types() );
-		$schema_types = array_keys( self::schema_types() );
 
 		// An unchecked checkbox sends nothing at all, so the loop below (which
 		// skips missing keys) could never clear a flag — they have to be read
@@ -281,8 +270,6 @@ class PC_Meta_Fields {
 				update_post_meta( $post_id, $key, esc_url_raw( $raw ) );
 			} elseif ( '_pc_price_type' === $key ) {
 				update_post_meta( $post_id, $key, in_array( $raw, $price_types, true ) ? $raw : '' );
-			} elseif ( '_pc_schema_type' === $key ) {
-				update_post_meta( $post_id, $key, in_array( $raw, $schema_types, true ) ? $raw : '' );
 			} elseif ( in_array( $key, array( '_pc_promo_expires', '_pc_promo_checked' ), true ) ) {
 				$date = preg_match( '/^\d{4}-\d{2}-\d{2}$/', (string) $raw ) ? $raw : '';
 				update_post_meta( $post_id, $key, $date );
