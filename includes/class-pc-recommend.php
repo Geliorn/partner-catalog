@@ -24,6 +24,9 @@ class PC_Recommend {
 	const BLOCK      = 'partner-catalog/recommended';
 	const POOL_CACHE = 'pc_recommend_pool';
 
+	/** Set once the module is on the page — keeps a template copy from repeating it. */
+	private static $rendered = false;
+
 	public static function init() {
 		add_filter( 'the_content', array( __CLASS__, 'auto_insert' ), 20 );
 		add_action( 'init', array( __CLASS__, 'register_script' ) );
@@ -83,11 +86,9 @@ class PC_Recommend {
 			return $content;
 		}
 
-		$module = self::render();
-		if ( '' === $module ) {
-			return $content;
-		}
-
+		// Find the spot first and render only if there is one: render() marks
+		// the module as shown, which must not happen for a text too short to
+		// hold it — the template's block (after the text) takes over then.
 		foreach ( array( array( '</h2>', 2 ), array( '</p>', 3 ) ) as $anchor ) {
 			list( $tag, $nth ) = $anchor;
 			$pos = -1;
@@ -109,10 +110,25 @@ class PC_Recommend {
 					$at = $next + 4;
 				}
 			}
-			return substr( $content, 0, $at ) . $module . substr( $content, $at );
+			$module = self::render();
+			return '' === $module ? $content : substr( $content, 0, $at ) . $module . substr( $content, $at );
 		}
 
-		return $content; // too short for a module in the middle — none.
+		return $content; // too short for a module in the middle — the template's block shows it after the text.
+	}
+
+	/**
+	 * The block as placed in a template or pattern (single post template,
+	 * repo page pattern): renders unless the module is switched off or is
+	 * already on the page — in an article the automatic in-text insertion
+	 * runs first (post-content renders before the block below it), so the
+	 * template copy only shows up where the text was too short for one.
+	 */
+	public static function render_block( $wrapper_attributes ) {
+		if ( ! PC_Settings::integration_enabled( 'recommend' ) || self::$rendered ) {
+			return '';
+		}
+		return self::render( $wrapper_attributes );
 	}
 
 	/** The module markup ('' when no supplier has a priority). */
@@ -121,6 +137,7 @@ class PC_Recommend {
 		if ( ! $pool ) {
 			return '';
 		}
+		self::$rendered = true;
 		wp_enqueue_script( 'pc-recommend' );
 
 		$rows = '';

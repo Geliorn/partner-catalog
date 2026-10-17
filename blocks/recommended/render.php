@@ -1,8 +1,10 @@
 <?php
 /**
- * «Где попробовать» placed by hand inside an article — same markup as the
- * automatic insertion (PC_Recommend::render()); its presence switches the
- * automatic one off for that post.
+ * «Где попробовать» as a block: placed by hand inside an article (its
+ * presence switches the automatic in-text insertion off for that post), or
+ * in a template/pattern — the single post template (after the text) and the
+ * repo page pattern of llm-agent-github-repos. Same markup as the automatic
+ * insertion; never twice on one page (PC_Recommend::render_block()).
  *
  * @var array $attributes className.
  */
@@ -11,4 +13,4 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-echo PC_Recommend::render( get_block_wrapper_attributes( array( 'class' => 'pc-rec' ) ) ); // phpcs:ignore WordPress.Security.EscapeOutput -- escaped inside.
+echo PC_Recommend::render_block( get_block_wrapper_attributes( array( 'class' => 'pc-rec' ) ) ); // phpcs:ignore WordPress.Security.EscapeOutput -- escaped inside.
