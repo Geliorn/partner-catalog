@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Partner Catalog
  * Description: Каталог подрядчиков и сервис-провайдеров (интеграторы, дистрибьюторы, хостинги, облачные платформы и т.д.) с ручным наполнением карточек. Без парсинга/сборщика — самодостаточен, не зависит от ACF/CPT UI.
- * Version: 0.4.0
+ * Version: 0.4.1
  * Author: llm-agent.ru
  * Text Domain: partner-catalog
  */
@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'PC_VERSION', '0.4.0' );
+define( 'PC_VERSION', '0.4.1' );
 define( 'PC_PLUGIN_FILE', __FILE__ );
 define( 'PC_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'PC_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
