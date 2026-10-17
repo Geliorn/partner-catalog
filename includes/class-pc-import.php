@@ -9,7 +9,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  * (per the chosen workflow); descriptions can be AI-generated afterwards.
  *
  * CSV: UTF-8, first row = header. Delimiter auto-detected (, ; or tab). A cell
- * holding several values (type, specialization, features, clients, faq) separates them with a vertical bar «|».
+ * holding several values (type, specialization, features, pay, platforms,
+ * tariffs, promos, faq) separates them with a vertical bar «|». Columns of
+ * older sample files (clients, promo_code…) are still accepted.
  */
 class PC_Import {
 
@@ -19,13 +21,13 @@ class PC_Import {
 	private static function meta_columns() {
 		return array(
 			'short_description' => '_pc_short_description',
+			'fit'               => '_pc_fit',
 			'website'           => '_pc_website',
+			'checked'           => '_pc_checked',
 			'price_type'        => '_pc_price_type',
 			'price_value'       => '_pc_price_value',
-			'promo_code'        => '_pc_promo_code',
-			'promo_description' => '_pc_promo_description',
-			'promo_expires'     => '_pc_promo_expires',
-			'promo_checked'     => '_pc_promo_checked',
+			'vpn'               => '_pc_vpn',
+			'priority'          => '_pc_priority',
 		);
 	}
 
@@ -35,7 +37,27 @@ class PC_Import {
 		foreach ( array_keys( PC_Meta_Fields::flags() ) as $meta_key ) {
 			$out[ ltrim( str_replace( '_pc_', '', $meta_key ), '_' ) ] = $meta_key;
 		}
+		$out['data_ru'] = '_pc_data_ru';
 		return $out;
+	}
+
+	/** «|»-list columns whose values switch checkboxes on: column => [value => meta key]. */
+	private static function set_columns() {
+		return array(
+			'pay'       => array(
+				'card'    => '_pc_pay_card',
+				'sbp'     => '_pc_pay_sbp',
+				'invoice' => '_pc_pay_invoice',
+				'foreign' => '_pc_pay_foreign',
+			),
+			'platforms' => array(
+				'web'      => '_pc_plat_web',
+				'telegram' => '_pc_plat_telegram',
+				'api'      => '_pc_plat_api',
+				'app'      => '_pc_plat_app',
+				'selfhost' => '_pc_plat_selfhost',
+			),
+		);
 	}
 
 	/** Cell values that mean "yes" for a flag column. */
@@ -47,7 +69,6 @@ class PC_Import {
 	private static function multiline_columns() {
 		return array(
 			'features' => '_pc_features',
-			'clients'  => '_pc_clients',
 		);
 	}
 
@@ -65,8 +86,9 @@ class PC_Import {
 			array( 'title' ),
 			array_keys( self::meta_columns() ),
 			array_keys( self::flag_columns() ),
+			array_keys( self::set_columns() ),
 			array_keys( self::multiline_columns() ),
-			array( 'faq' ),
+			array( 'tariffs', 'promos', 'faq' ),
 			array_keys( self::taxonomy_columns() )
 		);
 	}
@@ -80,7 +102,7 @@ class PC_Import {
 	public static function register_menu() {
 		add_submenu_page(
 			PC_Admin::MAIN_SLUG,
-			'Импорт поставщиков (CSV)',
+			'Импорт сервисов (CSV)',
 			'Импорт CSV',
 			'manage_options',
 			self::SAMPLE_SLUG,
@@ -95,7 +117,7 @@ class PC_Import {
 		$sample_url = wp_nonce_url( admin_url( 'admin-post.php?action=pc_sample_csv' ), 'pc_sample_csv' );
 		?>
 		<div class="wrap">
-			<h1>Импорт поставщиков из CSV</h1>
+			<h1>Импорт сервисов из CSV</h1>
 
 			<?php if ( isset( $_GET['imported'] ) ) : ?>
 				<div class="notice notice-success"><p>Импортировано записей: <?php echo (int) $_GET['imported']; ?><?php echo isset( $_GET['skipped'] ) && (int) $_GET['skipped'] ? ', пропущено строк: ' . (int) $_GET['skipped'] : ''; ?>.</p></div>
@@ -104,16 +126,21 @@ class PC_Import {
 				<div class="notice notice-error"><p><?php echo esc_html( wp_unslash( $_GET['import_error'] ) ); ?></p></div>
 			<?php endif; ?>
 
-			<p>Файл: <strong>UTF-8 CSV</strong>, первая строка — заголовки. Разделитель столбцов определяется автоматически (<code>,</code>, <code>;</code> или табуляция). Если в ячейке несколько значений (тип, специализация, особенности, клиенты, FAQ) — разделяйте их вертикальной чертой «<code>|</code>».</p>
+			<p>Файл: <strong>UTF-8 CSV</strong>, первая строка — заголовки. Разделитель столбцов определяется автоматически (<code>,</code>, <code>;</code> или табуляция). Если в ячейке несколько значений (тип, специализация, особенности, оплата, платформы, тарифы, промокоды, FAQ) — разделяйте их вертикальной чертой «<code>|</code>».</p>
 			<p><a class="button" href="<?php echo esc_url( $sample_url ); ?>">Скачать образец CSV</a></p>
 
 			<h2>Столбцы</h2>
 			<p class="description" style="max-width:820px">
-				<code>title</code> (обязательно) — название; <code>short_description</code>; <code>website</code>;
+				<code>title</code> (обязательно) — название; <code>short_description</code>; <code>fit</code> — продолжение фразы «Подойдёт, если…»; <code>website</code>;
+				<code>checked</code> — дата проверки условий редакцией (<code>ГГГГ-ММ-ДД</code>);
 				<code>price_type</code> (<?php echo esc_html( implode( ' | ', array_keys( PC_Meta_Fields::price_types() ) ) ); ?>); <code>price_value</code>;
-				<code>promo_code</code>, <code>promo_description</code>, <code>promo_expires</code>, <code>promo_checked</code> (даты — <code>ГГГГ-ММ-ДД</code>);
+				<code>vpn</code> — <code>no</code> (работает без VPN) или <code>yes</code> (нужен VPN);
+				<code>pay</code> — <code>card|sbp|invoice|foreign</code>; <code>platforms</code> — <code>web|telegram|api|app|selfhost</code>;
 				<code><?php echo esc_html( implode( '</code>, <code>', array_keys( self::flag_columns() ) ) ); ?></code> — условия, «1» / «да» = включено;
-				<code>features</code>, <code>clients</code> (несколько пунктов через «|»);
+				<code>features</code> (несколько пунктов через «|»);
+				<code>tariffs</code> — «название <code>::</code> цена <code>::</code> что входит», тарифы через «|»;
+				<code>promos</code> — «код <code>::</code> что даёт <code>::</code> для кого <code>::</code> до <code>::</code> проверен» (даты <code>ДД.ММ.ГГГГ</code>, последние поля можно опустить), промокоды через «|»;
+				<code>priority</code> — приоритет в блоке «Где попробовать» (0–100);
 				<code>faq</code> — пары «вопрос <code>::</code> ответ», сами пары через «|»;
 				<code>type</code> — тип сервиса (таксономия <code>contractor_type</code>), <code>specialization</code> — специализация (<code>contractor_specialization</code>); термины через «|», создаются при необходимости.
 			</p>
@@ -141,25 +168,28 @@ class PC_Import {
 		$out = fopen( 'php://output', 'w' );
 		fwrite( $out, "\xEF\xBB\xBF" ); // UTF-8 BOM so Excel opens it correctly.
 		fputcsv( $out, self::header() );
+		// Order = header(): title, meta_columns, flag_columns, set_columns, features, tariffs, promos, faq, type, specialization.
 		fputcsv( $out, array(
 			'ООО «Пример Интеграции»',
-			'Внедряем 1С и Bitrix24 для среднего бизнеса.',
-			'https://example.com',
-			'from', '150000',
-			'', '', '', '',
-			'', '', 'да',
+			'Внедряем 1С и Bitrix24 для среднего бизнеса.', 'внедрить AI-агента в CRM компании «под ключ»', 'https://example.com', '2026-10-13',
+			'from', '150000', 'no', '20',
+			'', '', 'да', 'да',
+			'invoice', '',
 			'Работаем 24/7|Фиксированная цена|Бесплатный аудит',
-			'X5 Retail Group|Сбер',
+			'',
+			'',
 			'Нужен ли VPN? :: Нет, сервис работает с российских IP.|Как оплатить? :: Картой РФ или по счёту для юрлиц.',
 			'Интегратор|Консалтинг',
 			'1С|Bitrix24',
 		) );
 		fputcsv( $out, array(
-			'Cloud Hosting Pro', 'Облачный хостинг и администрирование.', 'https://cloudpro.example',
-			'subscription', '990',
-			'CLOUD10', 'Скидка 10% на первый месяц', '2026-12-31', '2026-10-13',
-			'', 'да', 'да',
-			'SLA 99.9%|Поддержка на русском', '',
+			'Cloud Hosting Pro', 'Облачный хостинг и администрирование.', 'поднять MCP-сервер на недорогом VPS', 'https://cloudpro.example', '2026-10-13',
+			'subscription', '990', 'no', '60',
+			'', 'да', 'да', 'да',
+			'card|sbp|invoice', 'web|api|selfhost',
+			'SLA 99.9%|Поддержка на русском',
+			'Старт :: 290 ₽/мес :: 2 vCPU, 4 ГБ|Про :: 990 ₽/мес :: 8 vCPU, 16 ГБ',
+			'CLOUD10 :: −10% на первый месяц :: новых клиентов :: 31.12.2026 :: 13.10.2026',
 			'',
 			'Хостинг-провайдер', 'AWS|Yandex Cloud',
 		) );
@@ -269,8 +299,12 @@ class PC_Import {
 				$val = esc_url_raw( $val );
 			} elseif ( '_pc_price_type' === $key ) {
 				$val = in_array( $val, $price_types, true ) ? $val : '';
-			} elseif ( in_array( $key, array( '_pc_promo_expires', '_pc_promo_checked' ), true ) ) {
+			} elseif ( '_pc_checked' === $key ) {
 				$val = preg_match( '/^\d{4}-\d{2}-\d{2}$/', $val ) ? $val : '';
+			} elseif ( '_pc_vpn' === $key ) {
+				$val = in_array( strtolower( $val ), array( 'no', 'yes' ), true ) ? strtolower( $val ) : '';
+			} elseif ( '_pc_priority' === $key ) {
+				$val = min( 100, absint( $val ) );
 			} else {
 				$val = sanitize_text_field( $val );
 			}
@@ -281,6 +315,64 @@ class PC_Import {
 			if ( isset( $row[ $col ] ) && self::is_truthy( $row[ $col ] ) ) {
 				update_post_meta( $post_id, $key, '1' );
 			}
+		}
+
+		foreach ( self::set_columns() as $col => $map ) {
+			if ( empty( $row[ $col ] ) ) {
+				continue;
+			}
+			foreach ( array_map( 'trim', explode( '|', strtolower( (string) $row[ $col ] ) ) ) as $value ) {
+				if ( isset( $map[ $value ] ) ) {
+					update_post_meta( $post_id, $map[ $value ], '1' );
+				}
+			}
+		}
+
+		// «название :: цена :: что входит | …» → one tariff per line, « | »-separated (PC_Meta_Fields::tariff_items()).
+		if ( ! empty( $row['tariffs'] ) ) {
+			$lines = array();
+			foreach ( explode( '|', (string) $row['tariffs'] ) as $tariff ) {
+				$parts = array_map( 'trim', explode( '::', $tariff ) );
+				if ( '' !== $parts[0] ) {
+					$lines[] = implode( ' | ', $parts );
+				}
+			}
+			update_post_meta( $post_id, '_pc_tariffs', sanitize_textarea_field( implode( "\n", $lines ) ) );
+		}
+
+		// Promo codes: the new «promos» column, or the four promo_* columns of
+		// older sample files as a single code — both end up in _pc_promos.
+		$promo_blocks = array();
+		if ( ! empty( $row['promos'] ) ) {
+			foreach ( explode( '|', (string) $row['promos'] ) as $promo ) {
+				$p = array_map( 'trim', explode( '::', $promo ) );
+				if ( count( $p ) < 2 || '' === $p[0] || '' === $p[1] ) {
+					continue;
+				}
+				$lines = array( $p[0], $p[1] );
+				if ( ! empty( $p[2] ) ) {
+					$lines[] = 'Для: ' . $p[2];
+				}
+				if ( ! empty( $p[3] ) ) {
+					$lines[] = 'До: ' . $p[3];
+				}
+				if ( ! empty( $p[4] ) ) {
+					$lines[] = 'Проверен: ' . $p[4];
+				}
+				$promo_blocks[] = implode( "\n", $lines );
+			}
+		} elseif ( ! empty( $row['promo_code'] ) ) {
+			$lines = array( trim( (string) $row['promo_code'] ), trim( (string) ( $row['promo_description'] ?? '' ) ) ?: 'Промокод' );
+			if ( ! empty( $row['promo_expires'] ) ) {
+				$lines[] = 'До: ' . trim( (string) $row['promo_expires'] );
+			}
+			if ( ! empty( $row['promo_checked'] ) ) {
+				$lines[] = 'Проверен: ' . trim( (string) $row['promo_checked'] );
+			}
+			$promo_blocks[] = implode( "\n", $lines );
+		}
+		if ( $promo_blocks ) {
+			update_post_meta( $post_id, '_pc_promos', sanitize_textarea_field( implode( "\n\n", $promo_blocks ) ) );
 		}
 
 		// «вопрос :: ответ | вопрос :: ответ» → the blank-line-separated format
@@ -315,6 +407,9 @@ class PC_Import {
 				wp_set_object_terms( $post_id, $names, $taxonomy ); // creates missing terms by name
 			}
 		}
+
+		PC_Meta_Fields::refresh_derived( $post_id );
+		PC_Ratings::ensure_sort_meta( $post_id );
 
 		if ( class_exists( 'PC_SEO' ) ) {
 			PC_SEO::apply_meta_description( $post_id, (string) get_post_meta( $post_id, '_pc_short_description', true ) );

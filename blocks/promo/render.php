@@ -1,14 +1,14 @@
 <?php
 /**
- * Promo code box. Self-gating: renders nothing when there is no code or the
- * code has expired, so it can sit in the single-page pattern unconditionally
- * (same approach as meta-list/price).
+ * «Промокоды» (v2 mockup C): every live code from `_pc_promos` as a "ticket" —
+ * who it's for, what it gives, checked/expiry dates, and the code blurred
+ * until «Показать код» (the click copies it). Self-gating: no live codes — no
+ * heading, no block. Expired codes drop out on their own (promo_items()).
  *
- * The "Проверено …" line is the point of the block as much as the code is —
- * it is what makes a code believable, and it's the one thing the reference
- * catalog puts next to every promo.
+ * The «Проверен …» date is the point of the ticket as much as the code is —
+ * it is what makes a code believable.
  *
- * @var array $attributes Block attributes (unused beyond className).
+ * @var array $attributes heading.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -16,51 +16,35 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 $post_id = get_the_ID();
-if ( ! $post_id || ! PC_Meta_Fields::has_live_promo( $post_id ) ) {
+$items   = $post_id ? PC_Meta_Fields::promo_items( $post_id ) : array();
+if ( ! $items ) {
 	return;
 }
 
-$code        = trim( (string) get_post_meta( $post_id, '_pc_promo_code', true ) );
-$description = trim( (string) get_post_meta( $post_id, '_pc_promo_description', true ) );
-$expires     = (string) get_post_meta( $post_id, '_pc_promo_expires', true );
-$checked     = (string) get_post_meta( $post_id, '_pc_promo_checked', true );
+$heading = trim( (string) ( $attributes['heading'] ?? 'Промокоды' ) );
 
-// Fixed d.m.Y rather than the site's date_format: the rest of this plugin is
-// Russian-only hardcoded copy, and the option is usually left at WP's English
-// default ("October 13, 2026"), which reads wrong next to «Проверено».
-$date_format = 'd.m.Y';
-
-$wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'pc-promo' ) );
-
-echo '<div ' . $wrapper_attributes . '>';
-
-echo '<p class="pc-promo-title">Промокод</p>';
-
-if ( '' !== $description ) {
-	echo '<p class="pc-promo-desc">' . esc_html( $description ) . '</p>';
+echo '<section ' . get_block_wrapper_attributes( array( 'class' => 'pc-sec pc-promos' ) ) . '>'; // phpcs:ignore WordPress.Security.EscapeOutput
+if ( '' !== $heading ) {
+	echo '<h2 class="pc-sec-title">' . esc_html( $heading ) . '</h2>';
 }
+echo '<div class="pc-tickets">';
+foreach ( $items as $item ) {
+	$meta = array();
+	if ( '' !== $item['checked'] ) {
+		$meta[] = 'Проверен ' . PC_Meta_Fields::format_date( $item['checked'] );
+	}
+	$meta[] = '' !== $item['until'] ? 'действует до ' . PC_Meta_Fields::format_date( $item['until'] ) : 'без срока';
 
-printf(
-	'<div class="pc-promo-code-row"><code class="pc-promo-code">%1$s</code>'
-		. '<button type="button" class="pc-promo-copy" data-code="%2$s" data-done="Скопировано">Скопировать</button></div>',
-	esc_html( $code ),
-	esc_attr( $code )
-);
-
-$notes = array();
-if ( '' !== $checked ) {
-	$notes[] = 'Проверено ' . wp_date( $date_format, strtotime( $checked . ' 12:00:00' ) );
+	echo '<div class="pc-ticket"><div class="pc-ticket-text">';
+	echo '<div class="pc-ticket-k">' . esc_html( '' !== $item['for'] ? 'Для ' . $item['for'] : 'Промокод' ) . '</div>';
+	echo '<div class="pc-ticket-offer">' . esc_html( $item['offer'] ) . '</div>';
+	echo '<div class="pc-ticket-meta">' . esc_html( implode( ' · ', $meta ) ) . '</div>';
+	echo '</div><div class="pc-ticket-act">';
+	printf(
+		'<code class="pc-ticket-code" aria-hidden="true">%1$s</code><button type="button" class="pc-btn pc-btn-primary pc-btn-sm pc-promo-copy" data-code="%2$s" data-done="Скопировано ✓">Показать код</button>',
+		esc_html( $item['code'] ),
+		esc_attr( $item['code'] )
+	);
+	echo '</div></div>';
 }
-if ( '' !== $expires ) {
-	$notes[] = 'действует до ' . wp_date( $date_format, strtotime( $expires . ' 12:00:00' ) );
-}
-if ( $notes ) {
-	echo '<p class="pc-promo-note">' . esc_html( implode( ' · ', $notes ) ) . '</p>';
-}
-
-printf(
-	'<p class="pc-promo-cta"><a class="pc-outbound-link" href="%1$s" rel="nofollow noreferrer noopener">Перейти на сайт и применить →</a></p>',
-	esc_url( PC_Links::build_redirect_url( $post_id ) )
-);
-
-echo '</div>';
+echo '</div></section>';

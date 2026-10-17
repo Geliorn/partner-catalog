@@ -18,7 +18,7 @@ class PC_Settings {
 			// PC_Links::build_final_url(). Tokens: {slug}, {contractor_type}.
 			'utm_source'            => 'llm-agent.ru',
 			'utm_medium'            => 'partner-catalog',
-			'utm_campaign_template' => 'contractor-{slug}',
+			'utm_campaign_template' => 'service-{slug}', // was contractor-{slug} until 0.5.0 (section renamed «Сервисы»)
 			'utm_content_template'  => '{contractor_type}',
 
 			// Yandex.Metrika counter ID for the client-side goals (partner_profile_view,
@@ -47,11 +47,36 @@ class PC_Settings {
 			'integration_related_posts' => 1, // own related-posts block (partner-catalog/related-posts)
 			'integration_filters'       => 1, // own archive sidebar filters (partner-catalog/contractor-filters) — replaced Filter Everything 2026-09-29
 			'integration_schema'        => 1, // JSON-LD on the single page (class-pc-schema.php) — off if an SEO plugin already emits its own graph for `contractor`
+			'integration_recommend'     => 1, // «Где попробовать» module inside articles (class-pc-recommend.php)
+
+			// Which archive layout the `partner-catalog/archive` pattern (used by
+			// the theme's archive templates) renders: 'cards' (v2 mockup A —
+			// sidebar filters + card grid/list) or 'table' (mockup B — quick
+			// filters + comparison table). Both also exist as their own patterns.
+			'archive_view'              => 'cards',
+
+			// Post types the «Где попробовать» module is auto-inserted into
+			// (after the 2nd H2). Comma-separated.
+			'recommend_post_types'      => 'post',
 		);
 	}
 
 	public static function init() {
-		// Nothing to schedule — settings are just an option array, read on demand.
+		add_action( 'init', array( __CLASS__, 'maybe_migrate' ) );
+	}
+
+	/**
+	 * 0.5.0: the section is «Сервисы», so the default UTM campaign became
+	 * service-{slug}. A site that once saved its settings has the old default
+	 * stored, which the new default would never replace — swap it once. A
+	 * template someone customised is left alone.
+	 */
+	public static function maybe_migrate() {
+		$stored = get_option( self::OPTION_KEY, array() );
+		if ( is_array( $stored ) && isset( $stored['utm_campaign_template'] ) && 'contractor-{slug}' === $stored['utm_campaign_template'] ) {
+			$stored['utm_campaign_template'] = 'service-{slug}';
+			update_option( self::OPTION_KEY, $stored );
+		}
 	}
 
 	public static function get_all() {

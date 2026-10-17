@@ -99,7 +99,6 @@ PROMPT;
 			'specs'        => $terms( 'contractor_specialization' ),
 			'website'      => (string) get_post_meta( $post_id, '_pc_website', true ),
 			'features'     => (string) get_post_meta( $post_id, '_pc_features', true ),
-			'clients'      => (string) get_post_meta( $post_id, '_pc_clients', true ),
 			'price_type'   => (string) get_post_meta( $post_id, '_pc_price_type', true ),
 			'price_value'  => (string) get_post_meta( $post_id, '_pc_price_value', true ),
 			'conditions'   => self::condition_labels( $post_id ),
@@ -113,6 +112,10 @@ PROMPT;
 			if ( '1' === (string) get_post_meta( $post_id, $meta_key, true ) ) {
 				$labels[] = $label;
 			}
+		}
+		// Access / payment / platform facts (0.5.0) — the things an RF reader asks first.
+		foreach ( PC_Meta_Fields::facts( $post_id, 10 ) as $fact ) {
+			$labels[] = $fact[2];
 		}
 		return $labels;
 	}
@@ -153,7 +156,7 @@ PROMPT;
 			return '' !== $v ? str_replace( array( "\r\n", "\n" ), '; ', $v ) : '—';
 		};
 		return sprintf(
-			"Название: %s\nТип услуг: %s\nСпециализация: %s\nСайт: %s\nЦена: %s %s\nУсловия: %s\nОсобенности: %s\nКлючевые клиенты: %s",
+			"Название: %s\nТип услуг: %s\nСпециализация: %s\nСайт: %s\nЦена: %s %s\nУсловия: %s\nОсобенности: %s",
 			$list( $d['title'] ),
 			$list( $d['types'] ),
 			$list( $d['specs'] ),
@@ -161,8 +164,7 @@ PROMPT;
 			$list( $d['price_type'] ),
 			$list( $d['price_value'] ),
 			$list( $d['conditions'] ?? array() ),
-			$list( $d['features'] ),
-			$list( $d['clients'] )
+			$list( $d['features'] )
 		);
 	}
 

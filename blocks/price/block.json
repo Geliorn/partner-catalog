@@ -2,7 +2,7 @@
 	"$schema": "https://schemas.wp.org/trunk/block.json",
 	"apiVersion": 3,
 	"name": "partner-catalog/price",
-	"title": "Цена подрядчика",
+	"title": "Цена сервиса",
 	"category": "text",
 	"description": "Форматирует универсальное поле цены (тип + значение) в готовую строку («от X ₽», «по запросу» и т.д.).",
 	"textdomain": "partner-catalog",

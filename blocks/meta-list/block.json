@@ -4,13 +4,26 @@
 	"name": "partner-catalog/meta-list",
 	"title": "Список из meta-поля",
 	"category": "text",
-	"description": "Выводит многострочное meta-поле (особенности, клиенты) как список — bullet или строка бейджей.",
+	"description": "Выводит многострочное meta-поле (особенности) как список — bullet, с галочками или строкой бейджей. Необязательный заголовок раздела выводится только если список не пуст.",
 	"textdomain": "partner-catalog",
 	"attributes": {
-		"metaKey": { "type": "string", "default": "_pc_features" },
-		"style": { "type": "string", "default": "bullet" }
+		"metaKey": {
+			"type": "string",
+			"default": "_pc_features"
+		},
+		"style": {
+			"type": "string",
+			"default": "bullet"
+		},
+		"heading": {
+			"type": "string",
+			"default": ""
+		}
 	},
-	"supports": { "html": false, "className": true },
+	"supports": {
+		"html": false,
+		"className": true
+	},
 	"render": "file:./render.php",
 	"editorScript": "file:./index.js"
 }

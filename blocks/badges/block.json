@@ -4,9 +4,18 @@
 	"name": "partner-catalog/badges",
 	"title": "Бейджи условий",
 	"category": "widgets",
-	"description": "Плашки условий использования записи: «Бесплатно», «Есть бесплатный тариф», «Есть пробный период или демо», «Промокод». Читает чекбоксы и промокод записи.",
+	"description": "Пилюли записи: «Часто выбирают» (топ по переходам за 30 дней), «Бесплатный», «Бесплатный тариф», «Пробный период» — не больше 2.",
 	"textdomain": "partner-catalog",
-	"supports": { "html": false, "className": true },
+	"supports": {
+		"html": false,
+		"className": true
+	},
 	"render": "file:./render.php",
-	"editorScript": "file:./index.js"
+	"editorScript": "file:./index.js",
+	"attributes": {
+		"max": {
+			"type": "number",
+			"default": 2
+		}
+	}
 }

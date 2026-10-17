@@ -1,6 +1,10 @@
 <?php
 /**
- * @var array $attributes Block attributes (limit).
+ * «Альтернативы» at the bottom of the supplier page (v2 mockup C): mini cards
+ * with logo, type, stars, two facts, price and «Подробнее →» pinned to the
+ * card bottom. Self-gating with its heading — no matches, no section.
+ *
+ * @var array $attributes Block attributes (limit, heading).
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -18,22 +22,14 @@ if ( empty( $related ) ) {
 	return;
 }
 
-$wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'pc-related' ) );
+$heading = trim( (string) ( $attributes['heading'] ?? 'Альтернативы' ) );
 
-echo '<div ' . $wrapper_attributes . '>';
-foreach ( $related as $related_post ) {
-	$avg   = PC_Ratings::get_average( $related_post->ID );
-	$count = PC_Ratings::get_count( $related_post->ID );
-
-	echo '<a class="pc-related-card" href="' . esc_url( get_permalink( $related_post ) ) . '">';
-	echo '<span class="pc-related-title">' . esc_html( get_the_title( $related_post ) ) . '</span>';
-	if ( $count > 0 ) {
-		printf(
-			'<span class="pc-related-rating">♡ <b>%1$s</b> (%2$d)</span>',
-			esc_html( number_format_i18n( $avg, 1 ) ),
-			$count
-		);
-	}
-	echo '</a>';
+echo '<section ' . get_block_wrapper_attributes( array( 'class' => 'pc-sec pc-alts' ) ) . '>'; // phpcs:ignore WordPress.Security.EscapeOutput
+if ( '' !== $heading ) {
+	echo '<h2 class="pc-sec-title">' . esc_html( $heading ) . '</h2>';
 }
-echo '</div>';
+echo '<div class="pc-alt-grid">';
+foreach ( $related as $related_post ) {
+	echo PC_Render::mini( $related_post->ID ); // phpcs:ignore WordPress.Security.EscapeOutput
+}
+echo '</div></section>';

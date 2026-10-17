@@ -5,7 +5,7 @@
 	blocks.registerBlockType( 'partner-catalog/price', {
 		edit: function() {
 			var blockProps = blockEditor.useBlockProps();
-			return el( 'p', blockProps, el( 'em', null, 'Цена подрядчика (тип + значение из карточки)' ) );
+			return el( 'p', blockProps, el( 'em', null, 'Цена сервиса (тип + значение из карточки)' ) );
 		},
 		// Dynamic block — actual markup comes from render.php on the server.
 		save: function() {

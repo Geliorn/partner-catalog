@@ -34,7 +34,7 @@ class PC_Admin {
 	public static function register_menu() {
 		add_menu_page(
 			'Partner Catalog',
-			'Подрядчики',
+			'Сервисы',
 			'manage_options',
 			self::MAIN_SLUG,
 			array( __CLASS__, 'render_settings_page' ),
@@ -69,7 +69,7 @@ class PC_Admin {
 				<input type="hidden" name="action" value="pc_save_settings">
 
 				<h2>UTM-метки (авто-режим)</h2>
-				<p class="description">Применяются ко всем исходящим ссылкам на поставщиков, если у конкретной записи не заполнено ручное поле «UTM-параметры» (см. карточку подрядчика) — тогда оно полностью заменяет автогенерацию для этой записи. Токены в шаблонах: <code>{slug}</code> (адрес записи), <code>{contractor_type}</code> (тип сервиса).</p>
+				<p class="description">Применяются ко всем исходящим ссылкам на сервисы, если у конкретной записи не заполнено ручное поле «UTM-параметры» (см. карточку сервиса) — тогда оно полностью заменяет автогенерацию для этой записи. Токены в шаблонах: <code>{slug}</code> (адрес записи), <code>{contractor_type}</code> (тип сервиса).</p>
 				<table class="form-table">
 					<tr><th>utm_source</th><td><input type="text" name="utm_source" value="<?php echo esc_attr( $s['utm_source'] ); ?>" style="width:300px"></td></tr>
 					<tr><th>utm_medium</th><td><input type="text" name="utm_medium" value="<?php echo esc_attr( $s['utm_medium'] ); ?>" style="width:300px"></td></tr>
@@ -83,7 +83,7 @@ class PC_Admin {
 						<th>ID счётчика</th>
 						<td>
 							<input type="text" name="metrika_counter_id" value="<?php echo esc_attr( $s['metrika_counter_id'] ); ?>" style="width:150px">
-							<p class="description">Нужен только для двух JS-целей: <code>partner_profile_view</code> (просмотр страницы подрядчика) и <code>partner_click</code> (клик по ссылке на сайт поставщика). Сам код счётчика Метрики этот плагин не устанавливает — он должен уже быть на сайте.</p>
+							<p class="description">Нужен только для двух JS-целей: <code>partner_profile_view</code> (просмотр страницы сервиса) и <code>partner_click</code> (клик по ссылке на сайт сервиса). Сам код счётчика Метрики этот плагин не устанавливает — он должен уже быть на сайте.</p>
 						</td>
 					</tr>
 				</table>
@@ -98,17 +98,38 @@ class PC_Admin {
 									<option value="<?php echo esc_attr( $val ); ?>" <?php selected( $s['seo_plugin'], $val ); ?>><?php echo esc_html( $label ); ?></option>
 								<?php endforeach; ?>
 							</select>
-							<p class="description">Короткое описание подрядчика автоматически пишется в meta description выбранного плагина при сохранении записи.</p>
+							<p class="description">Короткое описание сервиса автоматически пишется в meta description выбранного плагина при сохранении записи.</p>
 						</td>
 					</tr>
-					<tr><th>Рейтинг сайта</th><td><label><input type="checkbox" name="integration_ratings" value="1" <?php checked( $s['integration_ratings'] ); ?>> показывать рейтинг (♡) в паттернах — свой виджет, без стороннего плагина</label></td></tr>
-					<tr><th>Похожие подрядчики</th><td><label><input type="checkbox" name="integration_related_posts" value="1" <?php checked( $s['integration_related_posts'] ); ?>> блок «Похожие подрядчики» на странице записи — свой код по типу/специализации, без стороннего плагина</label></td></tr>
+					<tr><th>Рейтинг сайта</th><td><label><input type="checkbox" name="integration_ratings" value="1" <?php checked( $s['integration_ratings'] ); ?>> показывать рейтинг (★) в паттернах — свой виджет, без стороннего плагина</label></td></tr>
+					<tr><th>Альтернативы</th><td><label><input type="checkbox" name="integration_related_posts" value="1" <?php checked( $s['integration_related_posts'] ); ?>> блок «Альтернативы» внизу страницы сервиса — по типу/специализации</label></td></tr>
 					<tr><th>Фильтры архива</th><td><label><input type="checkbox" name="integration_filters" value="1" <?php checked( $s['integration_filters'] ); ?>> боковая панель фильтров на архиве (partner-catalog/contractor-filters) — свой код, без стороннего плагина</label></td></tr>
-					<tr><th>Разметка schema.org</th><td><label><input type="checkbox" name="integration_schema" value="1" <?php checked( $s['integration_schema'] ); ?>> JSON-LD на странице подрядчика (рейтинг, цена, FAQ)</label><p class="description">Выключите, если SEO-плагин уже сам формирует разметку для типа записи «Подрядчик» — две разные схемы на одном URL хуже одной.</p></td></tr>
+					<tr><th>Разметка schema.org</th><td><label><input type="checkbox" name="integration_schema" value="1" <?php checked( $s['integration_schema'] ); ?>> JSON-LD на странице сервиса (рейтинг, цена, FAQ)</label><p class="description">Выключите, если SEO-плагин уже сам формирует разметку для типа записи «Сервис» — две разные схемы на одном URL хуже одной.</p></td></tr>
 				</table>
 
-				<h2>AI-описания поставщиков</h2>
-				<p class="description">Генерация короткого (для карточки) и полного (для страницы) описания по данным поставщика. Кнопка «Сгенерировать описание» есть на странице редактирования каждого поставщика; массовая генерация — кнопкой под формой.</p>
+				<h2>Вид каталога</h2>
+				<table class="form-table">
+					<tr>
+						<th>Архив сервисов</th>
+						<td>
+							<select name="archive_view">
+								<option value="cards" <?php selected( $s['archive_view'], 'cards' ); ?>>Карточки — фильтры сбоку, плитка/список</option>
+								<option value="table" <?php selected( $s['archive_view'], 'table' ); ?>>Таблица — быстрые фильтры сверху, сравнение колонками</option>
+							</select>
+							<p class="description">Применяется к архиву и страницам типов/специализаций (шаблоны темы используют паттерн «Сервисы: архив»).</p>
+						</td>
+					</tr>
+				</table>
+
+				<h2>«Где попробовать» в статьях</h2>
+				<table class="form-table">
+					<tr><th>Модуль</th><td><label><input type="checkbox" name="integration_recommend" value="1" <?php checked( $s['integration_recommend'] ); ?>> вставлять блок «Где попробовать» в статьи после 2-го подзаголовка</label>
+						<p class="description">Показываются 3 сервиса с приоритетом больше 0 (поле «Приоритет показа» в карточке сервиса), случайно с учётом приоритета. Если блок вставлен в статью вручную, автоматически он не добавляется.</p></td></tr>
+					<tr><th>Типы записей</th><td><input type="text" name="recommend_post_types" value="<?php echo esc_attr( $s['recommend_post_types'] ); ?>" style="width:300px"> <span class="description">через запятую, например <code>post</code></span></td></tr>
+				</table>
+
+				<h2>AI-описания сервисов</h2>
+				<p class="description">Генерация короткого (для карточки) и полного (для страницы) описания по данным сервиса. Кнопка «Сгенерировать описание» есть на странице редактирования каждого сервиса; массовая генерация — кнопкой под формой.</p>
 				<table class="form-table">
 					<tr><th>Провайдер</th><td>
 						<select name="ai_provider">
@@ -134,7 +155,7 @@ class PC_Admin {
 			</form>
 
 			<h2>Массовая генерация описаний</h2>
-			<p class="description">Сгенерирует описание для поставщиков <strong>без короткого описания</strong> (до 10 за один запуск, чтобы уложиться в лимит времени — запускайте повторно, пока есть записи).</p>
+			<p class="description">Сгенерирует описание для сервисов <strong>без короткого описания</strong> (до 10 за один запуск, чтобы уложиться в лимит времени — запускайте повторно, пока есть записи).</p>
 			<?php
 			$missing = self::count_contractors_without_description();
 			$gen_url = wp_nonce_url( admin_url( 'admin-post.php?action=pc_generate_all' ), 'pc_generate_all' );
@@ -170,10 +191,11 @@ class PC_Admin {
 			wp_die( 'Недостаточно прав.' );
 		}
 
-		$checkboxes  = array( 'integration_ratings', 'integration_related_posts', 'integration_filters', 'integration_schema' );
+		$checkboxes  = array( 'integration_ratings', 'integration_related_posts', 'integration_filters', 'integration_schema', 'integration_recommend' );
 		$text_fields = array(
 			'utm_source', 'utm_medium', 'utm_campaign_template', 'utm_content_template', 'metrika_counter_id', 'seo_plugin',
 			'ai_provider', 'deepseek_api_key', 'deepseek_model', 'qwen_api_key', 'qwen_model', 'qwen_base_url',
+			'recommend_post_types',
 		);
 
 		$values = array();
@@ -185,6 +207,7 @@ class PC_Admin {
 		foreach ( $checkboxes as $key ) {
 			$values[ $key ] = isset( $_POST[ $key ] ) ? 1 : 0;
 		}
+		$values['archive_view'] = isset( $_POST['archive_view'] ) && 'table' === $_POST['archive_view'] ? 'table' : 'cards';
 
 		PC_Settings::update( $values );
 
@@ -297,16 +320,16 @@ class PC_Admin {
 
 			<div style="display:flex;gap:16px;margin-bottom:20px">
 				<div style="background:#fff;border:1px solid #ccd0d4;border-radius:4px;padding:14px 20px"><div style="font-size:22px;font-weight:600"><?php echo esc_html( number_format_i18n( $totals['view'] ) ); ?></div><div>Переходы (просмотры)</div></div>
-				<div style="background:#fff;border:1px solid #ccd0d4;border-radius:4px;padding:14px 20px"><div style="font-size:22px;font-weight:600"><?php echo esc_html( number_format_i18n( $totals['click'] ) ); ?></div><div>Клики на сайт поставщика</div></div>
+				<div style="background:#fff;border:1px solid #ccd0d4;border-radius:4px;padding:14px 20px"><div style="font-size:22px;font-weight:600"><?php echo esc_html( number_format_i18n( $totals['click'] ) ); ?></div><div>Клики на сайт сервиса</div></div>
 				<div style="background:#fff;border:1px solid #ccd0d4;border-radius:4px;padding:14px 20px"><div style="font-size:22px;font-weight:600"><?php echo esc_html( $conv ); ?>%</div><div>Конверсия клик/переход</div></div>
 			</div>
 
 			<canvas id="pc-analytics-chart" width="900" height="260" style="max-width:100%;background:#fff;border:1px solid #ccd0d4;border-radius:4px"></canvas>
 			<script type="application/json" id="pc-analytics-series"><?php echo wp_json_encode( $series ); ?></script>
 
-			<h2 style="margin-top:30px">По подрядчикам</h2>
+			<h2 style="margin-top:30px">По сервисам</h2>
 			<table class="widefat striped">
-				<thead><tr><th>Подрядчик</th><th>Переходы</th><th>Клики</th><th>Конверсия</th></tr></thead>
+				<thead><tr><th>Сервис</th><th>Переходы</th><th>Клики</th><th>Конверсия</th></tr></thead>
 				<tbody>
 				<?php if ( empty( $top ) ) : ?>
 					<tr><td colspan="4">Пока нет данных за выбранный период.</td></tr>
@@ -345,7 +368,7 @@ class PC_Admin {
 
 	private static function render_contractor_select( $selected ) {
 		$posts = get_posts( array( 'post_type' => 'contractor', 'post_status' => 'any', 'posts_per_page' => -1, 'orderby' => 'title', 'order' => 'ASC' ) );
-		echo '<label>Подрядчик <select name="contractor_id"><option value="0">Все</option>';
+		echo '<label>Сервис <select name="contractor_id"><option value="0">Все</option>';
 		foreach ( $posts as $post ) {
 			printf( '<option value="%1$d" %2$s>%3$s</option>', $post->ID, selected( $selected, $post->ID, false ), esc_html( $post->post_title ) );
 		}

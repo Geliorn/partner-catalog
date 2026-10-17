@@ -33,27 +33,64 @@ class PC_Filters {
 	const SORT_PARAM = 'sort';
 
 	/**
-	 * Flag slug (what appears in the URL) => label. `promo` is derived from the
-	 * promo-code meta rather than being a stored flag of its own — a code that
-	 * has expired must stop matching on its own, without anyone editing the
-	 * record (see flag_meta_clause()).
+	 * Filter groups (0.5.0, v2 mockups): group => [label, flag slug => label].
+	 * Every slug is one `?flag[]=` value; flag_meta_clause() knows what each
+	 * one means. The original four slugs (free, free_tier, trial, promo) are
+	 * kept as they were, so old links keep working.
+	 *
+	 * @return array<string, array{label:string, flags:array<string,string>}>
 	 */
+	public static function flag_groups() {
+		return array(
+			'access'    => array(
+				'label' => 'Доступ и оплата',
+				'flags' => array(
+					'no_vpn'  => 'Работает без VPN',
+					'pay_ru'  => 'Оплата картой РФ / СБП',
+					'invoice' => 'Счёт для юрлиц',
+					'data_ru' => 'Данные хранятся в РФ',
+				),
+			),
+			'terms'     => array(
+				'label' => 'Условия',
+				'flags' => array(
+					'free'      => 'Полностью бесплатный',
+					'free_tier' => 'Есть бесплатный тариф',
+					'trial'     => 'Пробный период или демо',
+					'promo'     => 'Есть промокод',
+				),
+			),
+			'platforms' => array(
+				'label' => 'Платформы',
+				'flags' => array(
+					'web'      => 'Веб',
+					'telegram' => 'Telegram-бот',
+					'api'      => 'API',
+					'app'      => 'Приложение',
+					'selfhost' => 'Можно развернуть у себя',
+				),
+			),
+		);
+	}
+
+	/** Flat slug => label over all groups. */
 	public static function flags() {
 		$flags = array();
-		foreach ( PC_Meta_Fields::flags() as $meta_key => $label ) {
-			$flags[ str_replace( array( '_pc_is_', '_pc_has_' ), '', $meta_key ) ] = $label;
+		foreach ( self::flag_groups() as $group ) {
+			$flags += $group['flags'];
 		}
-		$flags['promo'] = 'Есть промокод';
 		return $flags;
 	}
 
 	/** Sort slug => label. 'default' is the archive's own order (newest first). */
 	public static function sort_options() {
 		return array(
-			'default' => 'По умолчанию',
-			'rating'  => 'По рейтингу',
-			'reviews' => 'По количеству оценок',
-			'alpha'   => 'По алфавиту',
+			'default'    => 'Сначала новые',
+			'rating'     => 'По рейтингу',
+			'reviews'    => 'По числу оценок',
+			'price'      => 'Сначала дешевле',
+			'price_desc' => 'Сначала дороже',
+			'alpha'      => 'По алфавиту',
 		);
 	}
 
@@ -112,14 +149,24 @@ class PC_Filters {
 			$query->set( 'orderby', array( 'title' => 'ASC' ) );
 		} elseif ( 'rating' === $sort || 'reviews' === $sort ) {
 			$meta_query['pc_sort'] = array(
-				'key' => 'rating' === $sort ? PC_Ratings::META_AVG : PC_Ratings::META_COUNT,
+				// "rating" sorts by the rank key, not the raw average: a record
+				// with 1–2 votes goes after the ones with enough votes (decided
+				// 2026-10-17), otherwise a single 5 outranks 4,8 from a hundred.
+				'key' => 'rating' === $sort ? PC_Ratings::META_RANK : PC_Ratings::META_COUNT,
 				// DECIMAL, not NUMERIC: meta_query's NUMERIC casts to SIGNED,
 				// which truncates — 4.9 and 4.1 would both sort as 4 and the
 				// "по рейтингу" order would be mostly arbitrary.
-				'type'    => 'rating' === $sort ? 'DECIMAL(10,2)' : 'NUMERIC',
+				'type'    => 'rating' === $sort ? 'DECIMAL(10,3)' : 'NUMERIC',
 				'compare' => 'EXISTS',
 			);
 			$query->set( 'orderby', array( 'pc_sort' => 'DESC', 'date' => 'DESC' ) );
+		} elseif ( 'price' === $sort || 'price_desc' === $sort ) {
+			$meta_query['pc_sort'] = array(
+				'key'     => PC_Meta_Fields::PRICE_SORT_KEY,
+				'type'    => 'DECIMAL(14,2)',
+				'compare' => 'EXISTS',
+			);
+			$query->set( 'orderby', array( 'pc_sort' => 'price' === $sort ? 'ASC' : 'DESC', 'title' => 'ASC' ) );
 		}
 
 		if ( $meta_query ) {
@@ -132,45 +179,90 @@ class PC_Filters {
 
 	/** The meta_query clause one flag stands for, or array() if unknown. */
 	public static function flag_meta_clause( $flag ) {
-		if ( 'promo' === $flag ) {
+		$on = function ( $key ) {
 			return array(
-				'relation' => 'AND',
-				array(
-					'key'     => '_pc_promo_code',
-					'value'   => '',
-					'compare' => '!=',
-				),
-				array(
-					'relation' => 'OR',
-					array(
-						'key'     => '_pc_promo_expires',
-						'compare' => 'NOT EXISTS',
-					),
-					array(
-						'key'     => '_pc_promo_expires',
-						'value'   => '',
-						'compare' => '=',
-					),
-					array(
-						'key'     => '_pc_promo_expires',
-						'value'   => current_time( 'Y-m-d' ),
-						'compare' => '>=',
-					),
-				),
+				'key'     => $key,
+				'value'   => '1',
+				'compare' => '=',
 			);
-		}
+		};
 
-		foreach ( array_keys( PC_Meta_Fields::flags() ) as $meta_key ) {
-			if ( str_replace( array( '_pc_is_', '_pc_has_' ), '', $meta_key ) === $flag ) {
+		switch ( $flag ) {
+			case 'promo':
+				// PC_Meta_Fields keeps the latest live expiry in one derived key,
+				// so an expired code stops matching without anyone editing it.
 				return array(
-					'key'     => $meta_key,
-					'value'   => '1',
+					'key'     => PC_Meta_Fields::PROMO_UNTIL_KEY,
+					'value'   => current_time( 'Y-m-d' ),
+					'compare' => '>=',
+				);
+			case 'no_vpn':
+				return array(
+					'key'     => '_pc_vpn',
+					'value'   => 'no',
 					'compare' => '=',
 				);
-			}
+			case 'pay_ru':
+				return array(
+					'relation' => 'OR',
+					$on( '_pc_pay_card' ),
+					$on( '_pc_pay_sbp' ),
+				);
+			case 'invoice':
+				return $on( '_pc_pay_invoice' );
+			case 'data_ru':
+				return $on( '_pc_data_ru' );
+			case 'free':
+				return $on( '_pc_is_free' );
+			case 'free_tier':
+				return $on( '_pc_has_free_tier' );
+			case 'trial':
+				return $on( '_pc_has_trial' );
+			case 'web':
+			case 'telegram':
+			case 'api':
+			case 'app':
+			case 'selfhost':
+				return $on( '_pc_plat_' . $flag );
 		}
 
 		return array();
+	}
+
+	/** URL of the current archive with one flag toggled (used by the quick filters of archive B). */
+	public static function toggle_flag_url( $flag ) {
+		$selected = self::selected_flags();
+		$selected = in_array( $flag, $selected, true ) ? array_values( array_diff( $selected, array( $flag ) ) ) : array_merge( $selected, array( $flag ) );
+		return self::url_with( array( self::FLAG_PARAM => $selected ) );
+	}
+
+	/** URL of the current archive with some GET params replaced (others kept, paging reset). */
+	public static function url_with( array $changes ) {
+		$params = array();
+		foreach ( self::TAXONOMY_PARAMS as $param ) {
+			if ( self::selected( $param ) ) {
+				$params[ $param ] = self::selected( $param );
+			}
+		}
+		if ( self::selected_flags() ) {
+			$params[ self::FLAG_PARAM ] = self::selected_flags();
+		}
+		if ( 'default' !== self::current_sort() ) {
+			$params[ self::SORT_PARAM ] = self::current_sort();
+		}
+		if ( isset( $_GET['view'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+			$params['view'] = sanitize_key( wp_unslash( $_GET['view'] ) ); // phpcs:ignore WordPress.Security.NonceVerification
+		}
+		foreach ( $changes as $key => $value ) {
+			if ( null === $value || array() === $value || 'default' === $value ) {
+				unset( $params[ $key ] );
+			} else {
+				$params[ $key ] = $value;
+			}
+		}
+		$base = remove_query_arg( 'paged', html_entity_decode( self::base_url() ) );
+		$base = preg_replace( '#/page/\d+/?$#', '/', $base );
+		return $params ? $base . '?' . http_build_query( $params ) : $base;
 	}
 
 	/** @return string[] Flag slugs selected in the URL. */

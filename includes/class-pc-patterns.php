@@ -5,7 +5,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /**
  * Registers the plugin's block patterns — the PHP implementation of the
- * approved mockups in docs/mockups/partner-catalog-pattern-*.html. Deliberately
+ * approved v2 mockups in docs/mockups/partner-catalog-v2/ (archive A =
+ * archive-a.html, archive B = archive-b.html, supplier page = single-c.html;
+ * v1 mockups: docs/mockups/partner-catalog-pattern-*.html). Deliberately
  * NOT a copy of llm-agent-github-repos' patterns (repo stats — stars/forks/
  * language — make no sense here); the shared conventions are: Block Bindings
  * for per-post meta, the site-wide ratings block, and integration toggles
@@ -49,166 +51,72 @@ class PC_Patterns {
 		register_block_pattern(
 			'partner-catalog/card',
 			array(
-				'title'       => 'Подрядчик: карточка',
-				'description' => 'Одна карточка подрядчика — использовать как содержимое Post Template внутри блока «Цикл запроса» для contractor.',
+				'title'       => 'Сервис: карточка',
+				'description' => 'Одна карточка сервиса — содержимое «Шаблона записи» внутри «Цикла запроса» для contractor.',
 				'categories'  => array( self::CATEGORY ),
 				'blockTypes'  => array( 'core/post-template' ),
-				'content'     => self::card_markup(),
+				'content'     => '<!-- wp:partner-catalog/card /-->',
 			)
 		);
 
 		register_block_pattern(
+			'partner-catalog/archive-cards',
+			array(
+				'title'       => 'Сервисы: архив — карточки',
+				'description' => 'Вариант A: шапка, фильтры в боковой колонке, панель (число, чипы, сортировка, плитка/список), сетка карточек, пагинация. Наследует запрос архива.',
+				'categories'  => array( self::CATEGORY ),
+				'content'     => self::archive_cards_markup(),
+			)
+		);
+
+		register_block_pattern(
+			'partner-catalog/archive-table',
+			array(
+				'title'       => 'Сервисы: архив — таблица',
+				'description' => 'Вариант B: шапка, вкладки по типам, быстрые фильтры, таблица сравнения с сортировкой по рейтингу и цене, пагинация. Наследует запрос архива.',
+				'categories'  => array( self::CATEGORY ),
+				'content'     => self::archive_table_markup(),
+			)
+		);
+
+		// The slot the theme's archive templates use: which of the two layouts
+		// it holds is a plugin setting (Partner Catalog → Настройки → Вид
+		// каталога), so switching needs no Site Editor work.
+		register_block_pattern(
+			'partner-catalog/archive',
+			array(
+				'title'       => 'Сервисы: архив (по настройке)',
+				'description' => 'Карточки или таблица — в зависимости от настройки «Вид каталога» плагина. Используется шаблонами архива темы.',
+				'categories'  => array( self::CATEGORY ),
+				'content'     => 'table' === PC_Settings::get( 'archive_view', 'cards' ) ? self::archive_table_markup() : self::archive_cards_markup(),
+			)
+		);
+
+		// Kept for templates saved before 0.5.0: just the grid + pagination.
+		register_block_pattern(
 			'partner-catalog/archive-grid',
 			array(
-				'title'       => 'Подрядчики: сетка архива',
-				'description' => 'Сетка карточек для архива каталога/типа/специализации — наследует запрос архива + пагинация. Сортировка и фильтры живут в блоке «Фильтры подрядчиков» (боковая колонка шаблона).',
+				'title'       => 'Сервисы: сетка карточек',
+				'description' => 'Только сетка карточек с пагинацией (без шапки и фильтров) — наследует запрос архива.',
 				'categories'  => array( self::CATEGORY ),
-				'content'     => self::archive_grid_markup(),
+				'content'     => self::grid_markup(),
 			)
 		);
 
 		register_block_pattern(
 			'partner-catalog/single-layout',
 			array(
-				'title'       => 'Подрядчик: страница записи',
-				'description' => 'Полная разметка одиночной записи contractor — шапка с ценой и кнопкой перехода, описание + боковая колонка (промокод, оценка по 5 критериям), похожие записи.',
+				'title'       => 'Сервис: страница записи',
+				'description' => 'Шапка во всю ширину (лого, «Подойдёт, если…», «Перейти на сайт», плитки), затем О сервисе → Особенности → Тарифы → Промокоды → Оценки посетителей → Частые вопросы → «Проверено редакцией» → Альтернативы.',
 				'categories'  => array( self::CATEGORY ),
 				'content'     => self::single_layout_markup(),
 			)
 		);
 	}
 
-	// ------------------------------------------------------------- helpers
-
-	private static function bound_paragraph( $meta_key, $placeholder = '', $font_size = 'small', $class = '' ) {
-		$class_json = $class ? ',"className":"' . esc_attr( $class ) . '"' : '';
-		$class_attr = $class ? ' ' . esc_attr( $class ) : '';
-		return sprintf(
-			'<!-- wp:paragraph {"fontSize":"%1$s"%4$s,"metadata":{"bindings":{"content":{"source":"core/post-meta","args":{"key":"%2$s"}}}}} --><p class="has-%1$s-font-size%5$s">%3$s</p><!-- /wp:paragraph -->',
-			esc_attr( $font_size ),
-			esc_attr( $meta_key ),
-			esc_html( $placeholder ),
-			$class_json,
-			$class_attr
-		);
-	}
-
-	/**
-	 * $outbound = true only for the tracked "Перейти на сайт" CTA (bound to the
-	 * virtual _pc_outbound_url) — it alone gets the pc-outbound-link class that
-	 * assets/js/pc-analytics.js listens for. Any other bound button links
-	 * straight to its own meta and is NOT part of the /out/ click-tracking flow.
-	 */
-	private static function bound_button( $meta_key, $label, $class = '', $outbound = false ) {
-		$attrs = array(
-			'fontSize' => 'small',
-			'metadata' => array(
-				'bindings' => array(
-					'url' => array(
-						'source' => 'core/post-meta',
-						'args'   => array( 'key' => $meta_key ),
-					),
-				),
-			),
-		);
-		if ( $class ) {
-			$attrs['className'] = $class;
-		}
-
-		$link_class = 'wp-block-button__link wp-element-button' . ( $outbound ? ' pc-outbound-link' : '' );
-		$rel        = $outbound ? ' rel="nofollow noreferrer noopener"' : ' target="_blank" rel="noreferrer noopener"';
-		$div_class  = 'wp-block-button has-custom-font-size has-small-font-size' . ( $class ? ' ' . esc_attr( $class ) : '' );
-
-		return '<!-- wp:buttons --><div class="wp-block-buttons"><!-- wp:button ' . wp_json_encode( $attrs ) . ' -->'
-			. '<div class="' . esc_attr( $div_class ) . '"><a class="' . esc_attr( $link_class ) . '" href="#"' . $rel . '>' . esc_html( $label ) . '</a></div>'
-			. '<!-- /wp:button --></div><!-- /wp:buttons -->';
-	}
-
-	/**
-	 * Ratings widget — own block (`partner-catalog/rating`, class-pc-ratings.php),
-	 * replacing WP-PostRatings as a dependency (decided 2026-09-04, same call
-	 * made for llm-agent-github-repos). Still gated behind the "ratings"
-	 * setting, now a plain feature on/off switch rather than "is the
-	 * third-party plugin active".
-	 */
-	private static function ratings_block( $className = '', $interactive = true ) {
-		if ( ! PC_Settings::integration_enabled( 'ratings' ) ) {
-			return '';
-		}
-		$attrs = array(
-			'size'        => $className ? 'large' : 'small',
-			'interactive' => $interactive,
-		);
-		if ( $className ) {
-			$attrs['className'] = $className;
-		}
-		return '<!-- wp:partner-catalog/rating ' . wp_json_encode( $attrs ) . ' /-->';
-	}
-
-	/** "Похожие подрядчики" — own block (`partner-catalog/related-posts`), replacing the Contextual Related Posts shortcode. */
-	private static function related_posts_block() {
-		if ( ! PC_Settings::integration_enabled( 'related_posts' ) ) {
-			return '';
-		}
-		return '<!-- wp:heading {"level":3} --><h3>Похожие подрядчики</h3><!-- /wp:heading --><!-- wp:partner-catalog/related-posts /-->';
-	}
-
-
-	private static function meta_list( $meta_key, $style = 'bullet', $class = '' ) {
-		$attrs           = array(
-			'metaKey' => $meta_key,
-			'style'   => $style,
-		);
-		if ( $class ) {
-			$attrs['className'] = $class;
-		}
-		return '<!-- wp:partner-catalog/meta-list ' . wp_json_encode( $attrs ) . ' /-->';
-	}
-
-	// -------------------------------------------------------------- card
-
-	private static function card_markup() {
-		// Read-only on a card — voting only happens on the contractor's own
-		// single page (partner-catalog/single-layout).
-		$ratings = self::ratings_block( '', false );
-
-		return '<!-- wp:group {"className":"pc-card","layout":{"type":"constrained"}} -->
-<div class="wp-block-group pc-card">
-
-<!-- wp:group {"className":"pc-card-top","layout":{"type":"flex","flexWrap":"nowrap"}} -->
-<div class="wp-block-group pc-card-top">
-<!-- wp:post-featured-image {"width":"44px","height":"44px","className":"pc-logo"} /-->
-<!-- wp:group {"layout":{"type":"constrained"}} -->
-<div class="wp-block-group">
-<!-- wp:post-title {"isLink":true,"fontSize":"medium"} /-->
-<!-- wp:post-terms {"term":"contractor_type","separator":" ","className":"pc-type-pill","fontSize":"small"} /-->
-</div>
-<!-- /wp:group -->
-</div>
-<!-- /wp:group -->
-
-<!-- wp:partner-catalog/badges /-->
-
-' . self::bound_paragraph( '_pc_short_description', 'Короткое описание', 'small', 'pc-card-desc' ) . '
-
-<!-- wp:post-terms {"term":"contractor_specialization","separator":" ","className":"pc-spec-pill","fontSize":"small"} /-->
-
-' . $ratings . '
-
-<!-- wp:group {"className":"pc-card-foot","layout":{"type":"flex","justifyContent":"space-between"}} -->
-<div class="wp-block-group pc-card-foot">
-<!-- wp:partner-catalog/price /-->
-<!-- wp:read-more {"content":"Подробнее →","fontSize":"small","textColor":"contrast","style":{"border":{"radius":"999px","width":"1px","color":"var:preset|color|light"},"spacing":{"padding":{"top":"0.35em","bottom":"0.35em","left":"1em","right":"1em"}},"typography":{"textDecoration":"none"}}} /-->
-</div>
-<!-- /wp:group -->
-
-</div>
-<!-- /wp:group -->';
-	}
-
 	// ---------------------------------------------------------- archive
 
-	private static function archive_grid_markup() {
+	private static function grid_markup() {
 		$query = wp_json_encode(
 			array(
 				'perPage'  => 12,
@@ -221,90 +129,84 @@ class PC_Patterns {
 			)
 		);
 
-		return '<!-- wp:query {"queryId":1,"query":' . $query . ',"displayLayout":{"type":"flex","columns":3},"className":"pc-tile-grid-wrap"} -->
-<div class="wp-block-query">
-<!-- wp:post-template {"className":"pc-tile-grid"} -->
-' . self::card_markup() . '
+		return '<!-- wp:query {"queryId":1,"query":' . $query . ',"className":"pc-grid-query"} -->
+<div class="wp-block-query pc-grid-query">
+<!-- wp:post-template {"className":"pc-tile-grid","layout":{"type":"default"}} -->
+<!-- wp:partner-catalog/card /-->
 <!-- /wp:post-template -->
 
-<!-- wp:query-pagination -->
-<!-- wp:query-pagination-previous /-->
+<!-- wp:query-pagination {"className":"pc-pager","layout":{"type":"flex","justifyContent":"center"}} -->
+<!-- wp:query-pagination-previous {"label":"←"} /-->
 <!-- wp:query-pagination-numbers /-->
-<!-- wp:query-pagination-next /-->
+<!-- wp:query-pagination-next {"label":"Далее →"} /-->
 <!-- /wp:query-pagination -->
 
 <!-- wp:query-no-results -->
-<!-- wp:paragraph --><p>По этому запросу подрядчиков пока нет.</p><!-- /wp:paragraph -->
+<!-- wp:paragraph {"className":"pc-empty"} --><p class="pc-empty">По этим условиям сервисов нет. Попробуйте убрать один из фильтров.</p><!-- /wp:paragraph -->
 <!-- /wp:query-no-results -->
 </div>
 <!-- /wp:query -->';
 	}
 
+	private static function archive_cards_markup() {
+		return '<!-- wp:partner-catalog/archive-head /-->
+
+<!-- wp:columns {"align":"wide","className":"pc-arch-layout"} -->
+<div class="wp-block-columns alignwide pc-arch-layout">
+<!-- wp:column {"width":"250px","className":"pc-arch-side"} -->
+<div class="wp-block-column pc-arch-side" style="flex-basis:250px">
+<!-- wp:partner-catalog/contractor-filters /-->
+</div>
+<!-- /wp:column -->
+
+<!-- wp:column {"className":"pc-arch-main"} -->
+<div class="wp-block-column pc-arch-main">
+<!-- wp:partner-catalog/archive-toolbar /-->
+
+' . self::grid_markup() . '
+</div>
+<!-- /wp:column -->
+</div>
+<!-- /wp:columns -->';
+	}
+
+	private static function archive_table_markup() {
+		return '<!-- wp:partner-catalog/archive-head {"lead":"Сравните условия: работает ли без VPN, как оплатить из России, сколько стоит. Данные проверяет редакция."} /-->
+
+<!-- wp:partner-catalog/archive-table {"align":"wide"} /-->';
+	}
+
 	// ------------------------------------------------------------ single
 
 	private static function single_layout_markup() {
-		$ratings = self::ratings_block( 'pc-single-rating' );
-		$related = self::related_posts_block();
+		$ratings = PC_Settings::integration_enabled( 'ratings' ) ? '<!-- wp:partner-catalog/rating /-->' : '';
+		$alts    = PC_Settings::integration_enabled( 'related_posts' ) ? '<!-- wp:partner-catalog/related-posts {"limit":3} /-->' : '';
 
-		// The sidebar holds the 5-criteria rating form (PC_Ratings::criteria())
-		// next to the promo code — it replaced the contacts box removed in
-		// 0.4.0, and price moved up next to the CTA, so the stats row went too.
-		$rating_box = $ratings
-			? '<!-- wp:heading {"level":4} --><h4>Оценка пользователей</h4><!-- /wp:heading -->' . "\n" . $ratings
-			: '';
+		return '<!-- wp:partner-catalog/hero {"align":"full"} /-->
 
-		return '<!-- wp:group {"className":"pc-single-header","layout":{"type":"flex","flexWrap":"wrap","justifyContent":"space-between"}} -->
-<div class="wp-block-group pc-single-header">
-<!-- wp:group {"layout":{"type":"flex","flexWrap":"nowrap"}} -->
-<div class="wp-block-group">
-<!-- wp:post-featured-image {"width":"64px","height":"64px","className":"pc-logo-lg"} /-->
-<!-- wp:group {"layout":{"type":"constrained"}} -->
-<div class="wp-block-group">
-<!-- wp:post-title {"level":1} /-->
-<!-- wp:post-terms {"term":"contractor_type","separator":" ","className":"pc-type-pill","fontSize":"small"} /-->
-<!-- wp:post-terms {"term":"contractor_specialization","separator":" ","className":"pc-spec-pill","fontSize":"small"} /-->
-<!-- wp:partner-catalog/badges /-->
-</div>
-<!-- /wp:group -->
-</div>
-<!-- /wp:group -->
-
-<!-- wp:group {"className":"pc-single-cta","layout":{"type":"flex","orientation":"vertical","justifyContent":"right"}} -->
-<div class="wp-block-group pc-single-cta">
-<!-- wp:partner-catalog/price {"fontSize":"medium"} /-->
-' . self::bound_button( '_pc_outbound_url', 'Перейти на сайт →', 'is-style-fill pc-cta', true ) . '
-</div>
-<!-- /wp:group -->
-</div>
-<!-- /wp:group -->
-
-<!-- wp:columns {"className":"pc-single-body"} -->
-<div class="wp-block-columns pc-single-body">
-<!-- wp:column {"width":"66.66%"} -->
-<div class="wp-block-column" style="flex-basis:66.66%">
-<!-- wp:heading {"level":3} --><h3>О компании</h3><!-- /wp:heading -->
+<!-- wp:group {"className":"pc-single-body","layout":{"type":"constrained","contentSize":"1000px"}} -->
+<div class="wp-block-group pc-single-body">
+<!-- wp:group {"className":"pc-sec pc-about","layout":{"type":"default"}} -->
+<div class="wp-block-group pc-sec pc-about">
+<!-- wp:heading {"className":"pc-sec-title"} --><h2 class="wp-block-heading pc-sec-title">О сервисе</h2><!-- /wp:heading -->
 <!-- wp:post-content /-->
-
-<!-- wp:heading {"level":3} --><h3>Особенности сервиса</h3><!-- /wp:heading -->
-' . self::meta_list( '_pc_features', 'bullet' ) . '
-
-<!-- wp:heading {"level":3} --><h3>Ключевые клиенты</h3><!-- /wp:heading -->
-' . self::meta_list( '_pc_clients', 'bullet' ) . '
-
-<!-- wp:partner-catalog/faq /-->
 </div>
-<!-- /wp:column -->
+<!-- /wp:group -->
 
-<!-- wp:column {"width":"33.33%","className":"pc-single-aside"} -->
-<div class="wp-block-column pc-single-aside" style="flex-basis:33.33%">
+<!-- wp:partner-catalog/meta-list {"metaKey":"_pc_features","style":"checks","heading":"Особенности"} /-->
+
+<!-- wp:partner-catalog/tariffs /-->
+
 <!-- wp:partner-catalog/promo /-->
 
-' . $rating_box . '
-</div>
-<!-- /wp:column -->
-</div>
-<!-- /wp:columns -->
+' . $ratings . '
 
-' . $related;
+<!-- wp:partner-catalog/faq /-->
+
+<!-- wp:partner-catalog/verify /-->
+
+' . $alts . '
+</div>
+<!-- /wp:group -->';
 	}
 }

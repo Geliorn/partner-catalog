@@ -27,6 +27,15 @@ class PC_Blocks {
 		register_block_type( PC_PLUGIN_DIR . 'blocks/badges' );
 		register_block_type( PC_PLUGIN_DIR . 'blocks/promo' );
 		register_block_type( PC_PLUGIN_DIR . 'blocks/faq' );
+		// 0.5.0 — v2 mockups (docs/mockups/partner-catalog-v2/).
+		register_block_type( PC_PLUGIN_DIR . 'blocks/card' );
+		register_block_type( PC_PLUGIN_DIR . 'blocks/archive-head' );
+		register_block_type( PC_PLUGIN_DIR . 'blocks/archive-toolbar' );
+		register_block_type( PC_PLUGIN_DIR . 'blocks/archive-table' );
+		register_block_type( PC_PLUGIN_DIR . 'blocks/hero' );
+		register_block_type( PC_PLUGIN_DIR . 'blocks/tariffs' );
+		register_block_type( PC_PLUGIN_DIR . 'blocks/verify' );
+		register_block_type( PC_PLUGIN_DIR . 'blocks/recommended' );
 	}
 
 	/**

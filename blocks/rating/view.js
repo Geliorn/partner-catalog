@@ -1,79 +1,104 @@
 /**
- * Front-end voting behaviour for partner-catalog/rating. Enqueued
- * automatically by WP core wherever the block appears (block.json's
- * "viewScript") — no manual wp_enqueue_script() needed.
- *
- * Unlike the single-score version this replaced (and unlike the sibling
- * llm-agent-github-repos widget), a click here only SELECTS a score: the vote
- * is sent once, for all criteria together, when "Оценить" is pressed — one
- * request per voter, so the per-browser cookie guard still matches one
- * submission, and a half-filled form can't lock the visitor out.
+ * Voting for partner-catalog/rating. A click only SELECTS a score; the vote
+ * is sent once for all criteria together on «Отправить оценку» — one request
+ * per voter, so the per-browser cookie guard matches one submission, and a
+ * half-filled form can't lock the visitor out. Hover previews the fill.
  */
 ( function() {
 	'use strict';
 
+	var STAR = 'M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z';
+	var uid = 0;
+
+	function fmt( n ) {
+		return ( Math.round( n * 10 ) / 10 ).toFixed( 1 ).replace( '.', ',' );
+	}
+
+	function plural( n, a, b, c ) {
+		var m10 = n % 10, m100 = n % 100;
+		if ( m100 >= 11 && m100 <= 14 ) { return c; }
+		if ( 1 === m10 ) { return a; }
+		if ( m10 >= 2 && m10 <= 4 ) { return b; }
+		return c;
+	}
+
+	/** Same geometry as PC_Render::stars(). */
+	function stars( value, size ) {
+		var gap = 2, w = size * 5 + gap * 4, paths = '', id = 'pc-stars-js-' + ( ++uid );
+		for ( var i = 0; i < 5; i++ ) {
+			paths += '<path transform="translate(' + ( i * ( size + gap ) ) + ' 0) scale(' + ( size / 24 ) + ')" d="' + STAR + '"/>';
+		}
+		var full = Math.floor( value ), clip = full * ( size + gap ) + ( value - full ) * size;
+		return '<svg class="pc-stars" width="' + w + '" height="' + size + '" viewBox="0 0 ' + w + ' ' + size + '" role="img" aria-label="Оценка ' + fmt( value ) + ' из 5">' +
+			'<defs><clipPath id="' + id + '"><rect width="' + clip + '" height="' + size + '"/></clipPath></defs>' +
+			'<g class="pc-stars-empty">' + paths + '</g><g class="pc-stars-full" clip-path="url(#' + id + ')">' + paths + '</g></svg>';
+	}
+
 	function paint( row, value ) {
-		row.querySelectorAll( '.pc-rating-star' ).forEach( function( star, index ) {
-			star.classList.toggle( 'is-selected', index < value );
+		row.querySelectorAll( '.pc-star-input button' ).forEach( function( b, i ) {
+			b.classList.toggle( 'is-on', i < value );
 		} );
 	}
 
-	function selections( wrap ) {
+	function selections( box ) {
 		var values = {};
-		wrap.querySelectorAll( '.pc-rating-row' ).forEach( function( row ) {
-			var picked = row.getAttribute( 'data-selected' );
-			if ( picked ) {
-				values[ row.getAttribute( 'data-criterion' ) ] = picked;
+		box.querySelectorAll( '.pc-rate-row' ).forEach( function( row ) {
+			var v = row.getAttribute( 'data-selected' );
+			if ( v ) {
+				values[ row.getAttribute( 'data-criterion' ) ] = v;
 			}
 		} );
 		return values;
 	}
 
-	document.addEventListener( 'click', function( event ) {
-		var star = event.target.closest( '.pc-rating-star' );
-		if ( star && ! star.disabled && 'BUTTON' === star.tagName ) {
-			var wrap = star.closest( '.pc-rating' );
-			var row  = star.closest( '.pc-rating-row' );
-			if ( ! wrap || ! row || wrap.classList.contains( 'pc-rating-readonly' ) || wrap.classList.contains( 'pc-rating-voted' ) ) {
-				return;
-			}
-			var value = star.getAttribute( 'data-value' );
-			row.setAttribute( 'data-selected', value );
-			paint( row, Number( value ) );
+	document.addEventListener( 'mouseover', function( event ) {
+		var b = event.target.closest( '.pc-star-input button' );
+		if ( b ) {
+			paint( b.closest( '.pc-rate-row' ), Number( b.getAttribute( 'data-value' ) ) );
+		}
+	} );
+	document.addEventListener( 'mouseout', function( event ) {
+		var input = event.target.closest( '.pc-star-input' );
+		if ( input && ! input.contains( event.relatedTarget ) ) {
+			var row = input.closest( '.pc-rate-row' );
+			paint( row, Number( row.getAttribute( 'data-selected' ) || 0 ) );
+		}
+	} );
 
-			var submit = wrap.querySelector( '.pc-rating-submit' );
+	document.addEventListener( 'click', function( event ) {
+		var star = event.target.closest( '.pc-star-input button' );
+		if ( star ) {
+			var row = star.closest( '.pc-rate-row' );
+			var box = star.closest( '.pc-rates' );
+			row.setAttribute( 'data-selected', star.getAttribute( 'data-value' ) );
+			paint( row, Number( star.getAttribute( 'data-value' ) ) );
+			var submit = box.querySelector( '.pc-rate-submit' );
 			if ( submit ) {
-				submit.disabled = Object.keys( selections( wrap ) ).length === 0;
+				submit.disabled = ! Object.keys( selections( box ) ).length;
 			}
 			return;
 		}
 
-		var button = event.target.closest( '.pc-rating-submit' );
+		var button = event.target.closest( '.pc-rate-submit' );
 		if ( ! button || button.disabled ) {
 			return;
 		}
-
-		var box = button.closest( '.pc-rating' );
-		if ( ! box ) {
-			return;
-		}
-
-		var values = selections( box );
+		var wrap = button.closest( '.pc-rates' );
+		var values = selections( wrap );
 		if ( ! Object.keys( values ).length ) {
 			return;
 		}
 
 		var body = new URLSearchParams();
 		body.set( 'action', 'pc_rate' );
-		body.set( 'post_id', box.getAttribute( 'data-post-id' ) );
-		body.set( 'nonce', box.getAttribute( 'data-nonce' ) );
-		Object.keys( values ).forEach( function( criterion ) {
-			body.set( 'values[' + criterion + ']', values[ criterion ] );
+		body.set( 'post_id', wrap.getAttribute( 'data-post-id' ) );
+		body.set( 'nonce', wrap.getAttribute( 'data-nonce' ) );
+		Object.keys( values ).forEach( function( k ) {
+			body.set( 'values[' + k + ']', values[ k ] );
 		} );
-
 		button.disabled = true;
 
-		fetch( box.getAttribute( 'data-ajax-url' ), {
+		fetch( wrap.getAttribute( 'data-ajax-url' ), {
 			method: 'POST',
 			credentials: 'same-origin',
 			headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -81,35 +106,29 @@
 		} )
 			.then( function( r ) { return r.json(); } )
 			.then( function( json ) {
+				var form = wrap.querySelector( '.pc-rate-me' );
 				if ( ! json || ! json.success ) {
 					button.disabled = false;
+					if ( json && json.data && json.data.message && form ) {
+						form.insertAdjacentHTML( 'beforeend', '<p class="pc-rate-note">' + json.data.message + '</p>' );
+					}
 					return;
 				}
-
-				box.classList.add( 'pc-rating-voted' );
-				box.querySelectorAll( '.pc-rating-star' ).forEach( function( el ) {
-					el.disabled = true;
-				} );
-
-				var overall = box.querySelector( '.pc-rating-overall .pc-rating-score' );
-				if ( overall ) {
-					overall.classList.remove( 'pc-rating-empty' );
-					overall.innerHTML = '<b>' + Number( json.data.average ).toFixed( 1 ).replace( '.', ',' ) +
-						'</b> / 5 · ' + json.data.count;
-				}
-
-				box.querySelectorAll( '.pc-rating-row' ).forEach( function( row ) {
-					var data  = json.data.criteria[ row.getAttribute( 'data-criterion' ) ];
-					var score = row.querySelector( '.pc-rating-crit-score' );
-					if ( data && score && data.count > 0 ) {
-						score.textContent = Number( data.average ).toFixed( 1 ).replace( '.', ',' );
+				var d = json.data;
+				wrap.classList.add( 'is-voted' );
+				wrap.querySelector( '.pc-r-big' ).textContent = fmt( d.average );
+				wrap.querySelector( '.pc-r-stars' ).innerHTML = stars( d.average, 22 );
+				wrap.querySelector( '.pc-r-total' ).textContent = d.count + ' ' + plural( d.count, 'оценка', 'оценки', 'оценок' );
+				wrap.querySelectorAll( '.pc-r-bar' ).forEach( function( bar ) {
+					var c = d.criteria[ bar.getAttribute( 'data-criterion' ) ];
+					if ( c && c.count > 0 ) {
+						bar.querySelector( 'b' ).textContent = fmt( c.average );
+						bar.querySelector( 'i' ).style.width = ( c.average / 5 * 100 ) + '%';
 					}
 				} );
-
-				var note = document.createElement( 'p' );
-				note.className = 'pc-rating-note pc-rating-thanks';
-				note.textContent = 'Спасибо, ваша оценка учтена.';
-				button.replaceWith( note );
+				if ( form ) {
+					form.innerHTML = '<p class="pc-rate-thanks">Спасибо, ваша оценка учтена.</p>';
+				}
 			} )
 			.catch( function() {
 				button.disabled = false;

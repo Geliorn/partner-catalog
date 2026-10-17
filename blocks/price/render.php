@@ -1,8 +1,8 @@
 <?php
 /**
- * Formats `_pc_price_type` + `_pc_price_value` into one display string.
- * Can't be a plain core/post-meta binding — the output depends on a
- * conditional on the type, not just a raw field value.
+ * The record's price (`_pc_price_type` + `_pc_price_value`) as one display
+ * string — formatting lives in PC_Meta_Fields::price_text() so the card, the
+ * comparison table and the page header all say the same thing.
  *
  * @var array $attributes Block attributes (fontSize).
  */
@@ -16,51 +16,12 @@ if ( ! $post_id ) {
 	return;
 }
 
-$type  = get_post_meta( $post_id, '_pc_price_type', true );
-$value = get_post_meta( $post_id, '_pc_price_value', true );
-
-if ( empty( $type ) ) {
-	return;
-}
-
-switch ( $type ) {
-	case 'free':
-		$text = 'Бесплатно';
-		break;
-	case 'subscription':
-		// The value may already carry its own unit ("990 ₽/мес" typed by hand
-		// for an odd plan), so only a bare number gets the suffix added.
-		$text = '' !== $value
-			? ( preg_match( '/^[\d\s\xC2\xA0.,–-]+$/', $value ) ? $value . ' ₽/мес' : $value )
-			: '';
-		break;
-	case 'usage':
-		$text = '' !== $value ? $value : 'Оплата по потреблению';
-		break;
-	case 'from':
-		$text = '' !== $value ? 'от ' . $value . ' ₽' : '';
-		break;
-	case 'range':
-		$text = '' !== $value ? $value . ' ₽' : '';
-		break;
-	case 'fixed':
-		$text = '' !== $value ? $value . ' ₽ за проект' : '';
-		break;
-	case 'hourly':
-		$text = '' !== $value ? $value . ' ₽/час' : '';
-		break;
-	case 'on_request':
-		$text = 'Цена по запросу';
-		break;
-	default:
-		$text = '';
-}
-
+$text = PC_Meta_Fields::price_text( $post_id );
 if ( '' === $text ) {
 	return;
 }
 
-$font_size_class = ! empty( $attributes['fontSize'] ) ? ' has-' . $attributes['fontSize'] . '-font-size has-custom-font-size' : '';
-$wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'pc-price' . $font_size_class ) );
+$font_size_class    = ! empty( $attributes['fontSize'] ) ? ' has-' . $attributes['fontSize'] . '-font-size has-custom-font-size' : '';
+$wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'pc-price-block' . $font_size_class ) );
 
-echo '<p ' . $wrapper_attributes . '>' . esc_html( $text ) . '</p>';
+echo '<p ' . $wrapper_attributes . '>' . esc_html( $text ) . '</p>'; // phpcs:ignore WordPress.Security.EscapeOutput

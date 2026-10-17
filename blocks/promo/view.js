@@ -1,8 +1,8 @@
 /**
- * Copy-to-clipboard for the promo code. navigator.clipboard is unavailable on
- * plain http (non-secure context) and in older browsers, so the code stays
- * visible as text and selectable either way — the button is a convenience, not
- * the only way to get the code.
+ * «Показать код»: un-blurs the code, copies it, and reports a
+ * `partner_promo_copy` Metrika goal when pc-analytics is configured.
+ * navigator.clipboard is unavailable on plain http and in older browsers, so
+ * the revealed code stays selectable text either way.
  */
 ( function() {
 	'use strict';
@@ -14,21 +14,22 @@
 		}
 
 		var code = button.getAttribute( 'data-code' ) || '';
-		var done = function() {
-			var original = button.textContent;
-			button.textContent = button.getAttribute( 'data-done' ) || 'OK';
-			button.classList.add( 'is-copied' );
-			window.setTimeout( function() {
-				button.textContent = original;
-				button.classList.remove( 'is-copied' );
-			}, 2000 );
-		};
+		var shown = button.parentNode.querySelector( '.pc-ticket-code' );
+		if ( shown ) {
+			shown.classList.add( 'is-shown' );
+			shown.removeAttribute( 'aria-hidden' );
+		}
+		button.textContent = button.getAttribute( 'data-done' ) || 'OK';
+		button.classList.add( 'is-copied' );
 
-		if ( navigator.clipboard && navigator.clipboard.writeText ) {
-			navigator.clipboard.writeText( code ).then( done ).catch( function() {} );
-			return;
+		if ( window.pcAnalytics && window.pcAnalytics.metrikaCounterId && typeof window.ym === 'function' ) {
+			window.ym( window.pcAnalytics.metrikaCounterId, 'reachGoal', 'partner_promo_copy' );
 		}
 
+		if ( navigator.clipboard && navigator.clipboard.writeText ) {
+			navigator.clipboard.writeText( code ).catch( function() {} );
+			return;
+		}
 		var field = document.createElement( 'textarea' );
 		field.value = code;
 		field.setAttribute( 'readonly', 'readonly' );
@@ -38,7 +39,6 @@
 		field.select();
 		try {
 			document.execCommand( 'copy' );
-			done();
 		} catch ( e ) {}
 		document.body.removeChild( field );
 	} );

@@ -2,15 +2,28 @@
 	"$schema": "https://schemas.wp.org/trunk/block.json",
 	"apiVersion": 3,
 	"name": "partner-catalog/rating",
-	"title": "Рейтинг подрядчика",
+	"title": "Сервис: оценки посетителей",
 	"category": "widgets",
-	"description": "Собственный рейтинговый виджет (заменяет WP-PostRatings) — оценки по нескольким критериям, каждая по 5-балльной шкале, без текста отзыва. Один голос на браузер.",
+	"description": "Средняя оценка со звёздами, полоски по 5 критериям и форма «Пользовались? Оцените» (звёзды, без текста отзыва, один голос на браузер). interactive=false — компактная строка «4,6 ★★★★★ (128)».",
 	"textdomain": "partner-catalog",
 	"attributes": {
-		"size": { "type": "string", "default": "small" },
-		"interactive": { "type": "boolean", "default": true }
+		"size": {
+			"type": "string",
+			"default": "small"
+		},
+		"interactive": {
+			"type": "boolean",
+			"default": true
+		},
+		"heading": {
+			"type": "string",
+			"default": "Оценки посетителей"
+		}
 	},
-	"supports": { "html": false, "className": true },
+	"supports": {
+		"html": false,
+		"className": true
+	},
 	"render": "file:./render.php",
 	"editorScript": "file:./index.js",
 	"viewScript": "file:./view.js"

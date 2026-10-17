@@ -120,8 +120,10 @@ class PC_Schema {
 		if ( ! PC_Settings::integration_enabled( 'ratings' ) ) {
 			return array();
 		}
+		// Stars are shown on the page from the first vote, but a 2-vote score
+		// is not put into the snippet (decided 2026-10-17).
 		$count = PC_Ratings::get_count( $post_id );
-		if ( $count < 1 ) {
+		if ( $count < PC_Ratings::MIN_VOTES ) {
 			return array();
 		}
 		return array(

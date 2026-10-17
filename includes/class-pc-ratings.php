@@ -33,13 +33,21 @@ class PC_Ratings {
 	const META_TOTAL = '_pc_rating_total';
 	const META_COUNT = '_pc_rating_count';
 	const META_AVG   = '_pc_rating_avg';
+	/** Sortable rank: the average with enough votes, else a tiny fraction of it (sinks 1–2-vote records). */
+	const META_RANK  = '_pc_rating_rank';
+
+	/**
+	 * Below this many votes a score is still SHOWN (stars are always shown,
+	 * decided 2026-10-17) but kept out of schema.org and sunk in "по рейтингу".
+	 */
+	const MIN_VOTES = 3;
 
 	const POST_TYPE    = 'contractor';
 	const NONCE_ACTION = 'pc_rate';
 
 	/** Bumped whenever the backfill below needs to run again. */
 	const BACKFILL_OPTION = 'pc_ratings_backfill';
-	const BACKFILL_VERSION = '1';
+	const BACKFILL_VERSION = '2'; // 2: + META_RANK (0.5.0)
 
 	/**
 	 * The criteria a visitor rates. Keys are stored in meta keys, so they are
@@ -65,7 +73,10 @@ class PC_Ratings {
 		add_action( 'wp_ajax_pc_rate', array( __CLASS__, 'handle_vote' ) );
 		add_action( 'wp_ajax_nopriv_pc_rate', array( __CLASS__, 'handle_vote' ) );
 		add_action( 'save_post_' . self::POST_TYPE, array( __CLASS__, 'ensure_sort_meta' ) );
-		add_action( 'plugins_loaded', array( __CLASS__, 'maybe_backfill' ) );
+		// `init`, not `plugins_loaded`: init() itself runs ON plugins_loaded
+		// (pc_boot), and a callback added to the hook currently firing, at the
+		// same priority, is never called — the backfill silently never ran.
+		add_action( 'init', array( __CLASS__, 'maybe_backfill' ) );
 	}
 
 	private static function criterion_key( $criterion, $suffix ) {
@@ -107,6 +118,7 @@ class PC_Ratings {
 	public static function ensure_sort_meta( $post_id ) {
 		add_post_meta( $post_id, self::META_AVG, 0, true );
 		add_post_meta( $post_id, self::META_COUNT, 0, true );
+		add_post_meta( $post_id, self::META_RANK, 0, true );
 	}
 
 	/** One-time pass so contractors created before 0.4.0 are sortable too. */
@@ -132,9 +144,23 @@ class PC_Ratings {
 		update_option( self::BACKFILL_OPTION, self::BACKFILL_VERSION, false );
 	}
 
-	/** Recomputes and stores META_AVG from the overall total/count. */
+	/** Recomputes and stores META_AVG / META_RANK from the overall total/count. */
 	public static function refresh_average( $post_id ) {
-		update_post_meta( $post_id, self::META_AVG, self::get_average( $post_id ) );
+		$avg = self::get_average( $post_id );
+		update_post_meta( $post_id, self::META_AVG, $avg );
+		update_post_meta( $post_id, self::META_RANK, self::get_count( $post_id ) >= self::MIN_VOTES ? $avg : round( $avg / 100, 3 ) );
+	}
+
+	/** The criterion with the highest average (≥1 vote), for the «Сильная сторона» tile. */
+	public static function best_criterion( $post_id ) {
+		$best = null;
+		foreach ( self::criteria() as $key => $label ) {
+			$c = self::get_criterion( $post_id, $key );
+			if ( $c['count'] > 0 && ( null === $best || $c['average'] > $best['average'] ) ) {
+				$best = array( 'label' => $label, 'average' => $c['average'] );
+			}
+		}
+		return $best;
 	}
 
 	/** Classic 3-form Russian plural — see LAGR_Ratings::ru_plural() for the same helper. */

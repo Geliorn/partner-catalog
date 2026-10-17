@@ -15,7 +15,7 @@ class PC_Stats {
 	const DB_VERSION        = '1.0';
 
 	public static function init() {
-		add_action( 'plugins_loaded', array( __CLASS__, 'maybe_upgrade' ) );
+		add_action( 'init', array( __CLASS__, 'maybe_upgrade' ) ); // not plugins_loaded — see PC_Ratings::init()
 		add_action( 'template_redirect', array( __CLASS__, 'maybe_track_view' ) );
 	}
 
@@ -62,6 +62,39 @@ class PC_Stats {
 				current_time( 'Y-m-d' )
 			)
 		);
+	}
+
+	/** Transient holding popular_ids(); short-lived so a new leader shows up the same day. */
+	const POPULAR_TRANSIENT = 'pc_popular_ids';
+
+	/**
+	 * «Часто выбирают» (decided 2026-10-17: automatic, by clicks): the top 3
+	 * contractors by outbound clicks over the last 30 days. A floor of 3 clicks
+	 * keeps a single stray click on a quiet catalog from earning the pill.
+	 *
+	 * @return int[]
+	 */
+	public static function popular_ids() {
+		$cached = get_transient( self::POPULAR_TRANSIENT );
+		if ( is_array( $cached ) ) {
+			return $cached;
+		}
+
+		global $wpdb;
+		$rows = $wpdb->get_col(
+			$wpdb->prepare(
+				'SELECT contractor_id FROM ' . self::table_name() . "
+				WHERE event_type = 'click' AND stat_date >= %s
+				GROUP BY contractor_id
+				HAVING SUM(count) >= 3
+				ORDER BY SUM(count) DESC
+				LIMIT 3",
+				gmdate( 'Y-m-d', current_time( 'timestamp' ) - 30 * DAY_IN_SECONDS )
+			)
+		);
+		$ids = array_map( 'intval', (array) $rows );
+		set_transient( self::POPULAR_TRANSIENT, $ids, 3 * HOUR_IN_SECONDS );
+		return $ids;
 	}
 
 	/** Counts a `view` on every real front-end hit of a single contractor page. No dedup — intentionally simple. */

@@ -1,0 +1,25 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "partner-catalog/archive-head",
+	"title": "Сервисы: шапка архива",
+	"category": "widgets",
+	"description": "Хлебные крошки, заголовок H1 и подзаголовок архива. На странице типа/специализации — название и описание термина.",
+	"textdomain": "partner-catalog",
+	"attributes": {
+		"title": {
+			"type": "string",
+			"default": "AI-сервисы"
+		},
+		"lead": {
+			"type": "string",
+			"default": "Нейросети, агрегаторы, хостинг и интеграторы, которые работают в России. Условия и цены проверяет редакция."
+		}
+	},
+	"supports": {
+		"html": false,
+		"className": true
+	},
+	"render": "file:./render.php",
+	"editorScript": "file:./index.js"
+}

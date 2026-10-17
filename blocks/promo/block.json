@@ -2,12 +2,21 @@
 	"$schema": "https://schemas.wp.org/trunk/block.json",
 	"apiVersion": 3,
 	"name": "partner-catalog/promo",
-	"title": "Промокод подрядчика",
+	"title": "Сервис: промокоды",
 	"category": "widgets",
-	"description": "Блок промокода: сам код с кнопкой «Скопировать», что он даёт, дата проверки и срок действия. Ничего не выводит, если кода нет или он просрочен.",
+	"description": "Блок «Промокоды»: каждый действующий промокод «билетом» (для кого, что даёт, даты), код открывается и копируется по кнопке. Нет действующих — блок не выводится.",
 	"textdomain": "partner-catalog",
-	"supports": { "html": false, "className": true },
+	"supports": {
+		"html": false,
+		"className": true
+	},
 	"render": "file:./render.php",
 	"editorScript": "file:./index.js",
-	"viewScript": "file:./view.js"
+	"viewScript": "file:./view.js",
+	"attributes": {
+		"heading": {
+			"type": "string",
+			"default": "Промокоды"
+		}
+	}
 }

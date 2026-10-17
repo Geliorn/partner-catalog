@@ -5,7 +5,12 @@
  * resolves once against the wrong post — see PC_Links' docblock for the
  * same issue elsewhere in this plugin).
  *
- * @var array  $attributes Block attributes (metaKey, style).
+ * Styles: bullet (plain list), checks (✓ icons in columns — «Особенности» on
+ * the supplier page), badges (row of pills). The optional heading is printed
+ * only when there is something to list, so an empty field leaves no orphan
+ * section title on the page.
+ *
+ * @var array  $attributes Block attributes (metaKey, style, heading).
  * @var string $content    Unused — dynamic block, no saved inner content.
  * @var WP_Block $block    Block instance.
  */
@@ -20,20 +25,22 @@ if ( ! $post_id ) {
 }
 
 $meta_key = $attributes['metaKey'] ?? '_pc_features';
-$raw      = get_post_meta( $post_id, $meta_key, true );
-$lines    = array_filter( array_map( 'trim', preg_split( '/\r\n|\r|\n/', (string) $raw ) ) );
-
+$lines    = PC_Meta_Fields::lines( $post_id, $meta_key );
 if ( empty( $lines ) ) {
 	return;
 }
 
-$is_badges = 'badges' === ( $attributes['style'] ?? 'bullet' );
-$classes   = 'pc-meta-list' . ( $is_badges ? ' pc-meta-list-badges' : ' pc-meta-list-bullet' );
+$style   = in_array( $attributes['style'] ?? 'bullet', array( 'bullet', 'checks', 'badges' ), true ) ? $attributes['style'] : 'bullet';
+$heading = trim( (string) ( $attributes['heading'] ?? '' ) );
 
-$wrapper_attributes = get_block_wrapper_attributes( array( 'class' => $classes ) );
+$wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'pc-meta-list-block' . ( '' !== $heading ? ' pc-sec' : '' ) ) );
 
-echo '<ul ' . $wrapper_attributes . '>';
-foreach ( $lines as $line ) {
-	echo '<li>' . esc_html( $line ) . '</li>';
+echo '<div ' . $wrapper_attributes . '>'; // phpcs:ignore WordPress.Security.EscapeOutput
+if ( '' !== $heading ) {
+	echo '<h2 class="pc-sec-title">' . esc_html( $heading ) . '</h2>';
 }
-echo '</ul>';
+echo '<ul class="pc-meta-list pc-meta-list-' . esc_attr( $style ) . '">';
+foreach ( $lines as $line ) {
+	echo '<li>' . ( 'checks' === $style ? PC_Render::icon( 'check' ) : '' ) . '<span>' . esc_html( $line ) . '</span></li>'; // phpcs:ignore WordPress.Security.EscapeOutput
+}
+echo '</ul></div>';

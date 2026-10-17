@@ -5,7 +5,7 @@
 	blocks.registerBlockType( 'partner-catalog/promo', {
 		edit: function() {
 			var blockProps = blockEditor.useBlockProps();
-			return el( 'p', blockProps, el( 'em', null, '% Промокод подрядчика (выводится, только если код заполнен и не просрочен)' ) );
+			return el( 'p', blockProps, el( 'em', null, '% Промокод сервиса (выводится, только если код заполнен и не просрочен)' ) );
 		},
 		save: function() {
 			return null;

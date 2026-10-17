@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: Partner Catalog
- * Description: Каталог подрядчиков и сервис-провайдеров (интеграторы, дистрибьюторы, хостинги, облачные платформы и т.д.) с ручным наполнением карточек. Без парсинга/сборщика — самодостаточен, не зависит от ACF/CPT UI.
- * Version: 0.4.1
+ * Description: Каталог поставщиков AI-сервисов и подрядчиков (интеграторы, дистрибьюторы, хостинги, облачные платформы и т.д.) с ручным наполнением карточек. Без парсинга/сборщика — самодостаточен, не зависит от ACF/CPT UI.
+ * Version: 0.5.0
  * Author: llm-agent.ru
  * Text Domain: partner-catalog
  */
@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'PC_VERSION', '0.4.1' );
+define( 'PC_VERSION', '0.5.0' );
 define( 'PC_PLUGIN_FILE', __FILE__ );
 define( 'PC_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'PC_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -25,6 +25,9 @@ require_once PC_PLUGIN_DIR . 'includes/class-pc-stats.php';
 require_once PC_PLUGIN_DIR . 'includes/class-pc-links.php';
 require_once PC_PLUGIN_DIR . 'includes/class-pc-ratings.php';
 require_once PC_PLUGIN_DIR . 'includes/class-pc-related.php';
+require_once PC_PLUGIN_DIR . 'includes/class-pc-render.php';
+require_once PC_PLUGIN_DIR . 'includes/class-pc-reports.php';
+require_once PC_PLUGIN_DIR . 'includes/class-pc-recommend.php';
 require_once PC_PLUGIN_DIR . 'includes/class-pc-blocks.php';
 require_once PC_PLUGIN_DIR . 'includes/class-pc-patterns.php';
 require_once PC_PLUGIN_DIR . 'includes/class-pc-admin.php';
@@ -43,6 +46,8 @@ function pc_boot() {
 	PC_Stats::init();
 	PC_Links::init();
 	PC_Ratings::init();
+	PC_Reports::init();
+	PC_Recommend::init();
 	PC_Blocks::init();
 	PC_Patterns::init();
 	PC_Admin::init();

@@ -1,6 +1,14 @@
 <?php
 /**
- * @var array $attributes Block attributes (size: 'small'|'large', interactive: bool).
+ * «Оценки посетителей» (v2 mockup C = section of B): the overall score with
+ * SVG stars, a bar per criterion, and the "Пользовались? Оцените" form —
+ * five star buttons per criterion, always visible, one submit for all.
+ * Stars replaced the hearts in 0.5.0 (Google-snippet look, PC_Render::stars).
+ *
+ * interactive=false is the compact read-only line used on cards
+ * ("4,6 ★★★★★ (128)") — kept for back-compat with saved patterns.
+ *
+ * @var array $attributes heading, interactive, size, className.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -12,95 +20,73 @@ if ( ! $post_id ) {
 	return;
 }
 
-$average     = PC_Ratings::get_average( $post_id );
-$count       = PC_Ratings::get_count( $post_id );
-$voted       = PC_Ratings::has_voted( $post_id );
-$size        = 'large' === ( $attributes['size'] ?? 'small' ) ? 'large' : 'small';
-$interactive = (bool) ( $attributes['interactive'] ?? true );
-
-$class = 'pc-rating pc-rating-' . $size . ( $voted ? ' pc-rating-voted' : '' ) . ( $interactive ? '' : ' pc-rating-readonly' );
-
-if ( ! $interactive ) {
-	// A card's rating is a plain current-score display, not a voting
-	// control — one heart + the number, no criteria rows (see
-	// lagr/rating's render.php for the identical reasoning).
-	$wrapper_attributes = get_block_wrapper_attributes( array( 'class' => $class ) );
-	echo '<div ' . $wrapper_attributes . '>';
-	echo '<span class="pc-rating-star" aria-hidden="true">♡</span>';
-	if ( $count > 0 ) {
-		printf(
-			'<span class="pc-rating-score"><b>%1$s</b> <span class="pc-rating-of">/ 5</span> · %2$d</span>',
-			esc_html( number_format_i18n( $average, 1 ) ),
-			$count
-		);
-	} else {
-		echo '<span class="pc-rating-score pc-rating-empty">—</span>';
-	}
-	echo '</div>';
+if ( ! ( $attributes['interactive'] ?? true ) ) {
+	echo '<div ' . get_block_wrapper_attributes( array( 'class' => 'pc-rating-compact' ) ) . '>' . PC_Render::rating( $post_id ) . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput
 	return;
 }
 
+$average  = PC_Ratings::get_average( $post_id );
+$count    = PC_Ratings::get_count( $post_id );
+$voted    = PC_Ratings::has_voted( $post_id );
 $criteria = PC_Ratings::criteria();
+$heading  = trim( (string) ( $attributes['heading'] ?? 'Оценки посетителей' ) );
+$star     = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="' . PC_Render::STAR_PATH . '"/></svg>';
 
 $wrapper_attributes = get_block_wrapper_attributes(
 	array(
-		'class'         => $class,
+		'class'         => 'pc-sec pc-rates' . ( $voted ? ' is-voted' : '' ),
+		'id'            => 'pc-rating',
 		'data-post-id'  => $post_id,
 		'data-nonce'    => wp_create_nonce( PC_Ratings::NONCE_ACTION ),
 		'data-ajax-url' => admin_url( 'admin-ajax.php' ),
 	)
 );
 
-echo '<div ' . $wrapper_attributes . '>';
-
-echo '<div class="pc-rating-overall">';
-echo '<span class="pc-rating-star" aria-hidden="true">♡</span>';
-if ( $count > 0 ) {
-	printf(
-		'<span class="pc-rating-score"><b>%1$s</b> / 5 · %2$d %3$s</span>',
-		esc_html( number_format_i18n( $average, 1 ) ),
-		$count,
-		esc_html( PC_Ratings::ru_plural( $count, 'оценка', 'оценки', 'оценок' ) )
-	);
-} else {
-	echo '<span class="pc-rating-score pc-rating-empty">пока нет оценок</span>';
+echo '<section ' . $wrapper_attributes . '>'; // phpcs:ignore WordPress.Security.EscapeOutput
+if ( '' !== $heading ) {
+	echo '<h2 class="pc-sec-title">' . esc_html( $heading ) . '</h2>';
 }
+echo '<div class="pc-rates-box">';
+
+// ---- summary
+echo '<div class="pc-rates-sum">';
+echo '<span class="pc-r-big">' . ( $count ? esc_html( number_format_i18n( $average, 1 ) ) : '—' ) . '</span>';
+echo '<span class="pc-r-stars">' . PC_Render::stars( $count ? $average : 0, 22 ) . '</span>'; // phpcs:ignore WordPress.Security.EscapeOutput
+echo '<span class="pc-r-total">' . esc_html( $count ? $count . ' ' . PC_Ratings::ru_plural( $count, 'оценка', 'оценки', 'оценок' ) : 'Пока нет оценок' ) . '</span>';
 echo '</div>';
 
-echo '<div class="pc-rating-criteria">';
+// ---- per-criterion bars
+echo '<div class="pc-r-bars">';
 foreach ( $criteria as $key => $label ) {
-	$current = PC_Ratings::get_criterion( $post_id, $key );
-
-	printf( '<div class="pc-rating-row" data-criterion="%s">', esc_attr( $key ) );
-	printf( '<span class="pc-rating-label">%s</span>', esc_html( $label ) );
-
+	$c = PC_Ratings::get_criterion( $post_id, $key );
 	printf(
-		'<span class="pc-rating-stars" role="group" aria-label="%s">',
-		esc_attr( $label . ' — оценка от 1 до 5' )
+		'<div class="pc-r-bar" data-criterion="%1$s"><span>%2$s</span><b>%3$s</b><span class="pc-r-track"><i style="width:%4$s%%"></i></span></div>',
+		esc_attr( $key ),
+		esc_html( $label ),
+		$c['count'] ? esc_html( number_format_i18n( $c['average'], 1 ) ) : '—',
+		$c['count'] ? round( $c['average'] / 5 * 100, 1 ) : 0
 	);
-	for ( $i = 1; $i <= 5; $i++ ) {
-		printf(
-			'<button type="button" class="pc-rating-star" data-value="%1$d"%2$s aria-label="%3$s: %1$d из 5">♡</button>',
-			$i,
-			$voted ? ' disabled' : '',
-			esc_attr( $label )
-		);
-	}
-	echo '</span>';
-
-	printf(
-		'<span class="pc-rating-crit-score">%s</span>',
-		$current['count'] > 0 ? esc_html( number_format_i18n( $current['average'], 1 ) ) : '—'
-	);
-	echo '</div>';
 }
 echo '</div>';
 
+// ---- the form
+echo '<div class="pc-rate-me">';
 if ( $voted ) {
-	echo '<p class="pc-rating-note pc-rating-thanks">Спасибо, ваша оценка учтена.</p>';
+	echo '<p class="pc-rate-thanks">Спасибо, ваша оценка учтена.</p>';
 } else {
-	echo '<button type="button" class="pc-rating-submit" disabled>Оценить</button>';
-	echo '<p class="pc-rating-note">Оценки без текста отзыва — один голос с одного браузера. Можно заполнить не все критерии.</p>';
+	echo '<div class="pc-rate-me-head"><b>Пользовались? Оцените</b><span>Без текста отзыва, можно не все критерии</span></div>';
+	echo '<div class="pc-rate-grid">';
+	foreach ( $criteria as $key => $label ) {
+		printf( '<div class="pc-rate-row" data-criterion="%1$s"><span>%2$s</span><span class="pc-star-input" role="group" aria-label="%3$s">', esc_attr( $key ), esc_html( $label ), esc_attr( $label . ' — оценка от 1 до 5' ) );
+		for ( $i = 1; $i <= 5; $i++ ) {
+			printf( '<button type="button" data-value="%1$d" aria-label="%2$s: %1$d из 5">%3$s</button>', $i, esc_attr( $label ), $star ); // phpcs:ignore WordPress.Security.EscapeOutput
+		}
+		echo '</span></div>';
+	}
+	echo '</div>';
+	echo '<button type="button" class="pc-btn pc-btn-primary pc-btn-sm pc-rate-submit" disabled>Отправить оценку</button>';
+	echo '<p class="pc-rate-note">Один голос с одного браузера.</p>';
 }
-
 echo '</div>';
+
+echo '</div></section>';

@@ -15,27 +15,79 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class PC_CPT {
 
+	/**
+	 * Public URL bases (decided 2026-10-17: the section is called «Сервисы»).
+	 * Until 0.5.0 they were /contractors/ and /contractor-type/ — those old
+	 * paths 301 to the new ones (legacy_redirect()), so links and search
+	 * positions carry over. Types live on their own base, not under
+	 * /services/type/: a non-hierarchical post type registers an attachment
+	 * rule `services/[^/]+/([^/]+)/?$` that would swallow /services/type/x/.
+	 */
+	const SLUG_ARCHIVE = 'services';
+	const SLUG_TYPE    = 'service-type';
+	const SLUG_SPEC    = 'specialization';
+
+	/** Old path prefix => new one. */
+	const LEGACY_PREFIXES = array(
+		'contractors'     => self::SLUG_ARCHIVE,
+		'contractor-type' => self::SLUG_TYPE,
+	);
+
+	/** Bump to make maybe_flush_rewrites() flush once after a slug change. */
+	const REWRITE_VERSION        = '0.5.0-services';
+	const REWRITE_VERSION_OPTION = 'pc_rewrite_version';
+
 	public static function init() {
 		add_action( 'init', array( __CLASS__, 'register_post_types' ) );
 		add_action( 'init', array( __CLASS__, 'register_taxonomies' ) );
+		add_action( 'init', array( __CLASS__, 'maybe_flush_rewrites' ), 99 );
+		add_action( 'template_redirect', array( __CLASS__, 'legacy_redirect' ), 1 );
+	}
+
+	/**
+	 * Updating the plugin doesn't run the activation hook, so new slugs would
+	 * 404 until someone re-saved permalinks — flush once, on the first request
+	 * after the slugs changed (after every rule, incl. PC_Links', is registered).
+	 */
+	public static function maybe_flush_rewrites() {
+		if ( get_option( self::REWRITE_VERSION_OPTION ) === self::REWRITE_VERSION ) {
+			return;
+		}
+		flush_rewrite_rules( false );
+		update_option( self::REWRITE_VERSION_OPTION, self::REWRITE_VERSION, false );
+	}
+
+	/** /contractors/… and /contractor-type/… → 301 to /services/… and /service-type/…, query string kept. */
+	public static function legacy_redirect() {
+		$uri  = isset( $_SERVER['REQUEST_URI'] ) ? wp_unslash( $_SERVER['REQUEST_URI'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		$home = (string) wp_parse_url( home_url( '/' ), PHP_URL_PATH );
+		$path = substr( (string) strtok( $uri, '?' ), strlen( rtrim( $home, '/' ) ) );
+		foreach ( self::LEGACY_PREFIXES as $old => $new ) {
+			if ( preg_match( '#^/' . preg_quote( $old, '#' ) . '(/.*)?$#', $path, $m ) ) {
+				$query = (string) wp_parse_url( $uri, PHP_URL_QUERY );
+				$target = home_url( '/' . $new . ( $m[1] ?? '/' ) ) . ( '' !== $query ? '?' . $query : '' );
+				wp_safe_redirect( $target, 301 );
+				exit;
+			}
+		}
 	}
 
 	public static function register_post_types() {
 		register_post_type(
 			'contractor',
 			array(
-				'label'        => 'Подрядчики',
+				'label'        => 'Сервисы',
 				'labels'       => array(
-					'name'          => 'Подрядчики',
-					'singular_name' => 'Подрядчик',
-					'add_new_item'  => 'Добавить подрядчика',
-					'edit_item'     => 'Подрядчик',
-					'search_items'  => 'Поиск подрядчиков',
-					'all_items'     => 'Все подрядчики',
+					'name'          => 'Сервисы',
+					'singular_name' => 'Сервис',
+					'add_new_item'  => 'Добавить сервис',
+					'edit_item'     => 'Сервис',
+					'search_items'  => 'Поиск сервисов',
+					'all_items'     => 'Все сервисы',
 				),
 				'public'       => true,
 				'has_archive'  => true,
-				'rewrite'      => array( 'slug' => 'contractors' ),
+				'rewrite'      => array( 'slug' => self::SLUG_ARCHIVE ),
 				'show_in_rest' => true,
 				'supports'     => array( 'title', 'editor', 'thumbnail', 'revisions' ),
 				'menu_icon'    => 'dashicons-groups',
@@ -54,7 +106,7 @@ class PC_CPT {
 				'public'            => true,
 				'show_in_rest'      => true,
 				'show_admin_column' => true,
-				'rewrite'           => array( 'slug' => 'contractor-type' ),
+				'rewrite'           => array( 'slug' => self::SLUG_TYPE ),
 			)
 		);
 
@@ -67,7 +119,7 @@ class PC_CPT {
 				'public'            => true,
 				'show_in_rest'      => true,
 				'show_admin_column' => true,
-				'rewrite'           => array( 'slug' => 'specialization' ),
+				'rewrite'           => array( 'slug' => self::SLUG_SPEC ),
 			)
 		);
 

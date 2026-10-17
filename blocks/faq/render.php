@@ -26,12 +26,12 @@ if ( empty( $items ) ) {
 
 $heading = trim( (string) ( $attributes['heading'] ?? 'Частые вопросы' ) );
 
-$wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'pc-faq' ) );
+$wrapper_attributes = get_block_wrapper_attributes( array( 'class' => 'pc-sec pc-faq' ) );
 
-echo '<div ' . $wrapper_attributes . '>';
+echo '<section ' . $wrapper_attributes . '>';
 
 if ( '' !== $heading ) {
-	echo '<h3 class="pc-faq-heading">' . esc_html( $heading ) . '</h3>';
+	echo '<h2 class="pc-sec-title">' . esc_html( $heading ) . '</h2>';
 }
 
 foreach ( $items as $item ) {
@@ -42,4 +42,4 @@ foreach ( $items as $item ) {
 	);
 }
 
-echo '</div>';
+echo '</section>';

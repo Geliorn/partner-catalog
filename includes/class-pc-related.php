@@ -4,7 +4,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Own "related contractors" lookup — replaces the Contextual Related Posts
+ * Own "related contractors" lookup (shown as «Альтернативы» since 0.5.0) — replaces the Contextual Related Posts
  * shortcode (decided 2026-09-04, see class-pc-ratings.php docblock). Matches
  * on EITHER shared contractor_type OR shared contractor_specialization —
  * contractor has two meaningful taxonomy axes (unlike github_repo's single
@@ -43,8 +43,13 @@ class PC_Related {
 				'post_status'    => 'publish',
 				'post__not_in'   => array( $post_id ),
 				'posts_per_page' => $limit,
-				'orderby'        => 'date',
-				'order'          => 'DESC',
+				// Best-rated first (rank sinks 1–2-vote records, see PC_Ratings);
+				// every contractor has the key seeded, so none drop out.
+				'meta_key'       => PC_Ratings::META_RANK, // phpcs:ignore WordPress.DB.SlowDBQuery
+				'orderby'        => array(
+					'meta_value_num' => 'DESC',
+					'date'           => 'DESC',
+				),
 				'tax_query'      => $tax_query, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
 			)
 		);

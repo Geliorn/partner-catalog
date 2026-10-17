@@ -1,0 +1,15 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "partner-catalog/card",
+	"title": "Сервис: карточка",
+	"category": "widgets",
+	"description": "Карточка сервиса для архива (паттерн A): лого, название, тип, рейтинг, до 2 пилюль, описание, 3 факта, цена, «Подробнее →». Ставится внутрь «Шаблона записи» цикла запроса.",
+	"textdomain": "partner-catalog",
+	"supports": {
+		"html": false,
+		"className": true
+	},
+	"render": "file:./render.php",
+	"editorScript": "file:./index.js"
+}

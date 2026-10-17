@@ -2,7 +2,7 @@
 	"$schema": "https://schemas.wp.org/trunk/block.json",
 	"apiVersion": 3,
 	"name": "partner-catalog/contractor-filters",
-	"title": "Фильтры подрядчиков",
+	"title": "Фильтры сервисов",
 	"category": "widgets",
 	"description": "Собственный виджет фильтрации архива: сортировка, тип, специализация и условия использования (бесплатно / бесплатный тариф / пробный период / промокод). Обычная GET-форма, без AJAX и сторонних скриптов.",
 	"textdomain": "partner-catalog",
