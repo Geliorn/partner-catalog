@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * (per the chosen workflow); descriptions can be AI-generated afterwards.
  *
  * CSV: UTF-8, first row = header. Delimiter auto-detected (, ; or tab). A cell
- * holding several values (type, specialization, features, pay, platforms,
+ * holding several values (type, specialization, features, platforms,
  * tariffs, promos, faq) separates them with a vertical bar «|». Columns of
  * older sample files (clients, promo_code…) are still accepted.
  */
@@ -44,12 +44,6 @@ class PC_Import {
 	/** «|»-list columns whose values switch checkboxes on: column => [value => meta key]. */
 	private static function set_columns() {
 		return array(
-			'pay'       => array(
-				'card'    => '_pc_pay_card',
-				'sbp'     => '_pc_pay_sbp',
-				'invoice' => '_pc_pay_invoice',
-				'foreign' => '_pc_pay_foreign',
-			),
 			'platforms' => array(
 				'web'      => '_pc_plat_web',
 				'telegram' => '_pc_plat_telegram',
@@ -136,7 +130,7 @@ class PC_Import {
 				<code>checked</code> — дата проверки условий редакцией (<code>ГГГГ-ММ-ДД</code>);
 				<code>price_type</code> (<?php echo esc_html( implode( ' | ', array_keys( PC_Meta_Fields::price_types() ) ) ); ?>); <code>price_value</code>;
 				<code>vpn</code> — <code>no</code> (работает без VPN) или <code>yes</code> (нужен VPN);
-				<code>pay</code> — <code>card|sbp|invoice|foreign</code>; <code>platforms</code> — <code>web|telegram|api|app|selfhost</code>;
+				<code>platforms</code> — <code>web|telegram|api|app|selfhost</code>;
 				<code><?php echo esc_html( implode( '</code>, <code>', array_keys( self::flag_columns() ) ) ); ?></code> — условия, «1» / «да» = включено;
 				<code>features</code> (несколько пунктов через «|»);
 				<code>tariffs</code> — «название <code>::</code> цена <code>::</code> что входит», тарифы через «|»;
@@ -176,7 +170,7 @@ class PC_Import {
 			'Внедряем 1С и Bitrix24 для среднего бизнеса.', 'внедрить AI-агента в CRM компании «под ключ»', 'https://example.com', '2026-10-13',
 			'from', '150000', 'no', '20',
 			'', '', 'да', 'да',
-			'invoice', '',
+			'',
 			'Работаем 24/7|Фиксированная цена|Бесплатный аудит',
 			'',
 			'',
@@ -188,7 +182,7 @@ class PC_Import {
 			'Cloud Hosting Pro', 'Облачный хостинг и администрирование.', 'поднять MCP-сервер на недорогом VPS', 'https://cloudpro.example', '2026-10-13',
 			'subscription', '990', 'no', '60',
 			'', 'да', 'да', 'да',
-			'card|sbp|invoice', 'web|api|selfhost',
+			'web|api|selfhost',
 			'SLA 99.9%|Поддержка на русском',
 			'Старт :: 290 ₽/мес :: 2 vCPU, 4 ГБ|Про :: 990 ₽/мес :: 8 vCPU, 16 ГБ',
 			'CLOUD10 :: −10% на первый месяц :: новых клиентов :: 31.12.2026 :: 13.10.2026',

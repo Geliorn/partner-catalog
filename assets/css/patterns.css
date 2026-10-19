@@ -296,8 +296,7 @@
 	.pc-c-rank { grid-row: 1; grid-column: 1; text-align: left; padding-top: 10px !important; }
 	.pc-c-svc { grid-row: 1; grid-column: 2 / -1; }
 	.pc-c-rating { grid-column: 2 / -1; }
-	.pc-c-vpn { grid-column: 2; }
-	.pc-c-pay { grid-column: 3; }
+	.pc-c-vpn { grid-column: 2 / -1; }
 	.pc-c-plat { display: none !important; }
 	.pc-c-price { grid-column: 2; align-self: center; }
 	.pc-c-go { grid-column: 3; }

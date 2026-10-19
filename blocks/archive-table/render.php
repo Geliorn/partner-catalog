@@ -46,7 +46,6 @@ if ( ! is_tax( 'contractor_type' ) ) {
 // ---- quick filters
 $quick = array(
 	'no_vpn'    => array( 'globe', 'Без VPN' ),
-	'pay_ru'    => array( 'card', 'Карта РФ / СБП' ),
 	'free_tier' => array( 'spark', 'Есть бесплатный тариф' ),
 	'promo'     => array( 'tag', 'Есть промокод' ),
 	'data_ru'   => array( 'shield', 'Данные в РФ' ),
@@ -106,7 +105,7 @@ $offset   = max( 0, ( max( 1, (int) get_query_var( 'paged' ) ) - 1 ) * max( 1, $
 echo '<div class="pc-tbl-wrap"><table class="pc-tbl"><thead><tr>';
 echo '<th class="pc-c-rank">#</th><th>Сервис</th>';
 echo '<th>' . $sort_link( 'Рейтинг', 'rating' ) . '</th>'; // phpcs:ignore WordPress.Security.EscapeOutput
-echo '<th>Без VPN</th><th>Оплата из РФ</th><th>Платформы</th>';
+echo '<th>Без VPN</th><th>Платформы</th>';
 echo '<th>' . $sort_link( 'Цена', 'price' ) . '</th>'; // phpcs:ignore WordPress.Security.EscapeOutput
 echo '<th><span class="screen-reader-text">Действия</span></th></tr></thead><tbody>';
 
@@ -119,22 +118,6 @@ foreach ( $wp_query->posts as $i => $post ) {
 	$vpn = (string) get_post_meta( $id, '_pc_vpn', true );
 	$vpn_cell = 'no' === $vpn ? $yes( 'Без VPN' ) : ( 'yes' === $vpn ? $no( 'Нужен VPN' ) : '<span class="pc-yn is-u">—</span>' );
 
-	$pay = array();
-	foreach ( array( '_pc_pay_card' => 'Карта', '_pc_pay_sbp' => 'СБП', '_pc_pay_invoice' => 'Счёт' ) as $key => $label ) {
-		if ( '1' === get_post_meta( $id, $key, true ) ) {
-			$pay[] = $label;
-		}
-	}
-	if ( $pay ) {
-		$pay_cell = $yes( implode( ', ', $pay ) );
-	} elseif ( '1' === get_post_meta( $id, '_pc_pay_foreign', true ) ) {
-		$pay_cell = $no( 'Только зарубежная' );
-	} elseif ( '1' === get_post_meta( $id, '_pc_is_free', true ) ) {
-		$pay_cell = '<span class="pc-yn is-u">не нужна</span>';
-	} else {
-		$pay_cell = '<span class="pc-yn is-u">—</span>';
-	}
-
 	echo '<tr>';
 	echo '<td class="pc-c-rank">' . (int) ( $offset + $i + 1 ) . '</td>';
 	echo '<td class="pc-c-svc"><div class="pc-svc">' . PC_Render::logo( $id, 'pc-logo-sm' ) . '<div>'; // phpcs:ignore WordPress.Security.EscapeOutput
@@ -145,7 +128,6 @@ foreach ( $wp_query->posts as $i => $post ) {
 	echo '</div></div></td>';
 	echo '<td class="pc-c-rating">' . PC_Render::rating( $id, 13 ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput
 	echo '<td class="pc-c-vpn">' . $vpn_cell . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput
-	echo '<td class="pc-c-pay">' . $pay_cell . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput
 	echo '<td class="pc-c-plat">' . esc_html( implode( ', ', PC_Meta_Fields::platform_labels( $id ) ) ) . '</td>';
 	echo '<td class="pc-c-price">' . PC_Render::price( $id ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput
 	echo '<td class="pc-c-go">' . PC_Render::details_button( $id ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput

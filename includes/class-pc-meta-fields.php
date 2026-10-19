@@ -73,16 +73,6 @@ class PC_Meta_Fields {
 		);
 	}
 
-	/** Payment methods — checkbox meta, same '1'/absent convention as flags(). */
-	public static function payment_methods() {
-		return array(
-			'_pc_pay_card'    => 'Карта РФ',
-			'_pc_pay_sbp'     => 'СБП',
-			'_pc_pay_invoice' => 'Счёт для юрлиц',
-			'_pc_pay_foreign' => 'Только зарубежная карта',
-		);
-	}
-
 	/** Where the service runs — checkbox meta. Labels are the short card/table form. */
 	public static function platforms() {
 		return array(
@@ -103,11 +93,10 @@ class PC_Meta_Fields {
 		);
 	}
 
-	/** Every checkbox-style key this class owns (flags + payment + platforms + data-in-RF). */
+	/** Every checkbox-style key this class owns (flags + platforms + data-in-RF). */
 	public static function checkbox_keys() {
 		return array_merge(
 			array_keys( self::flags() ),
-			array_keys( self::payment_methods() ),
 			array_keys( self::platforms() ),
 			array( '_pc_data_ru' )
 		);
@@ -284,9 +273,8 @@ class PC_Meta_Fields {
 			)
 		);
 
-		echo '<h3>Доступ и оплата</h3>';
+		echo '<h3>Доступ</h3>';
 		self::field( $post->ID, '_pc_vpn', 'Доступ из РФ', 'select', array( 'choices' => self::vpn_options() ) );
-		self::checkbox_grid( $post->ID, self::payment_methods() );
 		self::field( $post->ID, '_pc_data_ru', 'Данные хранятся в РФ', 'checkbox' );
 
 		echo '<h3>Платформы</h3>';
@@ -654,7 +642,7 @@ class PC_Meta_Fields {
 	// -------------------------------------------------------------- facts
 
 	/**
-	 * The key facts, ordered by what an RF visitor asks first: VPN → payment →
+	 * The key facts, ordered by what an RF visitor asks first: VPN →
 	 * self-hosting/data → where it runs. Each: [tone ok|warn|neutral, icon, text].
 	 *
 	 * @return array<int, array{0:string,1:string,2:string}>
@@ -666,18 +654,6 @@ class PC_Meta_Fields {
 			$out[] = array( 'ok', 'globe', 'Работает без VPN' );
 		} elseif ( 'yes' === $vpn ) {
 			$out[] = array( 'warn', 'globe', 'Нужен VPN' );
-		}
-
-		$pay = array();
-		foreach ( array( '_pc_pay_card', '_pc_pay_sbp', '_pc_pay_invoice' ) as $key ) {
-			if ( '1' === get_post_meta( $post_id, $key, true ) ) {
-				$pay[] = self::payment_methods()[ $key ];
-			}
-		}
-		if ( $pay ) {
-			$out[] = array( 'ok', 'card', implode( ' · ', $pay ) );
-		} elseif ( '1' === get_post_meta( $post_id, '_pc_pay_foreign', true ) ) {
-			$out[] = array( 'warn', 'card', 'Только зарубежная карта' );
 		}
 
 		if ( '1' === get_post_meta( $post_id, '_pc_plat_selfhost', true ) ) {

@@ -43,11 +43,9 @@ class PC_Filters {
 	public static function flag_groups() {
 		return array(
 			'access'    => array(
-				'label' => 'Доступ и оплата',
+				'label' => 'Доступ',
 				'flags' => array(
 					'no_vpn'  => 'Работает без VPN',
-					'pay_ru'  => 'Оплата картой РФ / СБП',
-					'invoice' => 'Счёт для юрлиц',
 					'data_ru' => 'Данные хранятся в РФ',
 				),
 			),
@@ -202,14 +200,6 @@ class PC_Filters {
 					'value'   => 'no',
 					'compare' => '=',
 				);
-			case 'pay_ru':
-				return array(
-					'relation' => 'OR',
-					$on( '_pc_pay_card' ),
-					$on( '_pc_pay_sbp' ),
-				);
-			case 'invoice':
-				return $on( '_pc_pay_invoice' );
 			case 'data_ru':
 				return $on( '_pc_data_ru' );
 			case 'free':
