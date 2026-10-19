@@ -89,7 +89,8 @@ class PC_Import {
 			array_keys( self::set_columns() ),
 			array_keys( self::multiline_columns() ),
 			array( 'tariffs', 'promos', 'faq' ),
-			array_keys( self::taxonomy_columns() )
+			array_keys( self::taxonomy_columns() ),
+			array( 'logo' )
 		);
 	}
 
@@ -142,7 +143,8 @@ class PC_Import {
 				<code>promos</code> — «код <code>::</code> что даёт <code>::</code> для кого <code>::</code> до <code>::</code> проверен» (даты <code>ДД.ММ.ГГГГ</code>, последние поля можно опустить), промокоды через «|»;
 				<code>priority</code> — приоритет в блоке «Где попробовать» (0–100);
 				<code>faq</code> — пары «вопрос <code>::</code> ответ», сами пары через «|»;
-				<code>type</code> — тип сервиса (таксономия <code>contractor_type</code>), <code>specialization</code> — специализация (<code>contractor_specialization</code>); термины через «|», создаются при необходимости.
+				<code>type</code> — тип сервиса (таксономия <code>contractor_type</code>), <code>specialization</code> — специализация (<code>contractor_specialization</code>); термины через «|», создаются при необходимости;
+				<code>logo</code> — ссылка на картинку логотипа (PNG, JPG, WebP или GIF; ICO не принимается): файл скачивается в медиатеку и становится изображением записи.
 			</p>
 
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" enctype="multipart/form-data">
@@ -408,6 +410,10 @@ class PC_Import {
 			}
 		}
 
+		if ( ! empty( $row['logo'] ) ) {
+			self::set_logo( $post_id, trim( (string) $row['logo'] ), (string) $row['title'] );
+		}
+
 		PC_Meta_Fields::refresh_derived( $post_id );
 		PC_Ratings::ensure_sort_meta( $post_id );
 
@@ -415,5 +421,48 @@ class PC_Import {
 			PC_SEO::apply_meta_description( $post_id, (string) get_post_meta( $post_id, '_pc_short_description', true ) );
 		}
 		return true;
+	}
+
+	/**
+	 * Downloads the image at $url into the media library and makes it the
+	 * contractor's featured image (= the logo PC_Render::logo() shows). The file
+	 * name is built from the detected image type, so extension-less URLs
+	 * (favicon services, CDN links) work too. Failures are silent: the card
+	 * falls back to the letter logo.
+	 */
+	private static function set_logo( $post_id, $url, $title ) {
+		$url = esc_url_raw( $url );
+		if ( '' === $url ) {
+			return;
+		}
+		require_once ABSPATH . 'wp-admin/includes/file.php';
+		require_once ABSPATH . 'wp-admin/includes/media.php';
+		require_once ABSPATH . 'wp-admin/includes/image.php';
+
+		$tmp = download_url( $url, 20 );
+		if ( is_wp_error( $tmp ) ) {
+			return;
+		}
+		$exts = array(
+			'image/png'  => 'png',
+			'image/jpeg' => 'jpg',
+			'image/gif'  => 'gif',
+			'image/webp' => 'webp',
+		);
+		$mime = wp_get_image_mime( $tmp ); // .ico is rejected: the media library refuses it
+		if ( ! isset( $exts[ $mime ] ) ) {
+			wp_delete_file( $tmp );
+			return;
+		}
+		$file = array(
+			'name'     => sanitize_title( $title ) . '-logo.' . $exts[ $mime ],
+			'tmp_name' => $tmp,
+		);
+		$att_id = media_handle_sideload( $file, $post_id, $title );
+		if ( is_wp_error( $att_id ) ) {
+			wp_delete_file( $tmp );
+			return;
+		}
+		set_post_thumbnail( $post_id, $att_id );
 	}
 }
