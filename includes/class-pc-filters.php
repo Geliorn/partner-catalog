@@ -45,7 +45,7 @@ class PC_Filters {
 			'access'    => array(
 				'label' => 'Доступ',
 				'flags' => array(
-					'no_vpn'  => 'Работает без VPN',
+					'no_vpn'  => 'Доступно в РФ',
 					'data_ru' => 'Данные хранятся в РФ',
 				),
 			),

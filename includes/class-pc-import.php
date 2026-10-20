@@ -128,7 +128,7 @@ class PC_Import {
 				<code>title</code> и <code>website</code> (оба обязательны; по ним ищется уже существующий сервис — совпало название <em>или</em> сайт → запись обновляется, а не создаётся дубль; пустые ячейки при обновлении не стирают сохранённые значения); <code>short_description</code> — короткое описание (шапка страницы и карточка);
 				<code>checked</code> — дата проверки условий редакцией (<code>ГГГГ-ММ-ДД</code>);
 				<code>price_type</code> (<?php echo esc_html( implode( ' | ', array_keys( PC_Meta_Fields::price_types() ) ) ); ?>); <code>price_value</code>;
-				<code>vpn</code> — <code>no</code> (работает без VPN) или <code>yes</code> (нужен VPN);
+				<code>vpn</code> — <code>no</code> (доступно в РФ) или <code>yes</code> (не доступно в РФ);
 				<code>platforms</code> — <code>web|telegram|api|app|selfhost</code>;
 				<code><?php echo esc_html( implode( '</code>, <code>', array_keys( self::flag_columns() ) ) ); ?></code> — условия, «1» / «да» = включено;
 				<code>features</code> (несколько пунктов через «|»);
@@ -174,7 +174,7 @@ class PC_Import {
 			'Работаем 24/7|Фиксированная цена|Бесплатный аудит',
 			'',
 			'',
-			'Нужен ли VPN? :: Нет, сервис работает с российских IP.|Как оплатить? :: Картой РФ или по счёту для юрлиц.',
+			'Доступен ли сервис в РФ? :: Да, сервис работает с российских IP.|Есть ли бесплатный аудит? :: Да, перед стартом проекта.',
 			'Интегратор|Консалтинг',
 			'1С|Bitrix24',
 		) );

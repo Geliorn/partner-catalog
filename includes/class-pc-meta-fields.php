@@ -88,8 +88,8 @@ class PC_Meta_Fields {
 	public static function vpn_options() {
 		return array(
 			''    => 'Не указано',
-			'no'  => 'Работает без VPN',
-			'yes' => 'Нужен VPN',
+			'no'  => 'Доступно в РФ',
+			'yes' => 'Не доступно в РФ',
 		);
 	}
 
@@ -307,7 +307,7 @@ class PC_Meta_Fields {
 			'textarea',
 			array(
 				'rows'        => 8,
-				'description' => 'Пример:<br><code>Нужен ли VPN?<br>Нет, сервис работает с российских IP напрямую.<br><br>Как оплатить?<br>Картой РФ или по счёту для юрлиц.</code><br>Выводится блоком «Частые вопросы» и попадает в разметку FAQPage (schema.org).',
+				'description' => 'Пример:<br><code>Доступен ли сервис в РФ?<br>Да, сервис работает с российских IP напрямую.<br><br>Есть ли бесплатный тариф?<br>Да, 20 запросов в день к базовым моделям.</code><br>Выводится блоком «Частые вопросы» и попадает в разметку FAQPage (schema.org).',
 			)
 		);
 
@@ -645,7 +645,7 @@ class PC_Meta_Fields {
 	// -------------------------------------------------------------- facts
 
 	/**
-	 * The key facts, ordered by what an RF visitor asks first: VPN →
+	 * The key facts, ordered by what an RF visitor asks first: availability in RF (_pc_vpn) →
 	 * self-hosting/data → where it runs. Each: [tone ok|warn|neutral, icon, text].
 	 *
 	 * @return array<int, array{0:string,1:string,2:string}>
@@ -654,9 +654,9 @@ class PC_Meta_Fields {
 		$out = array();
 		$vpn = (string) get_post_meta( $post_id, '_pc_vpn', true );
 		if ( 'no' === $vpn ) {
-			$out[] = array( 'ok', 'globe', 'Работает без VPN' );
+			$out[] = array( 'ok', 'globe', 'Доступно в РФ' );
 		} elseif ( 'yes' === $vpn ) {
-			$out[] = array( 'warn', 'globe', 'Нужен VPN' );
+			$out[] = array( 'warn', 'globe', 'Не доступно в РФ' );
 		}
 
 		if ( '1' === get_post_meta( $post_id, '_pc_plat_selfhost', true ) ) {

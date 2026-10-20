@@ -23,7 +23,7 @@ class PC_Reports {
 	public static function reasons() {
 		return array(
 			'price'  => 'Цена или тарифы',
-			'vpn'    => 'Перестал работать без VPN',
+			'vpn'    => 'Перестал быть доступен в РФ',
 			'promo'  => 'Промокод не действует',
 			'closed' => 'Сервис закрылся',
 			'other'  => 'Другое',

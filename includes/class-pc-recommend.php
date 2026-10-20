@@ -168,7 +168,7 @@ class PC_Recommend {
 			. '<p class="pc-rec-kicker">Где попробовать</p>'
 			. '<ul class="pc-rec-rows">' . $rows . '</ul>'
 			. '<div class="pc-rec-foot">'
-			. ( $more ? '<span>Ещё ' . esc_html( $more . ' ' . PC_Ratings::ru_plural( $more, 'сервис', 'сервиса', 'сервисов' ) ) . ' с фильтрами «без VPN» и «бесплатный тариф»</span>' : '<span></span>' )
+			. ( $more ? '<span>Ещё ' . esc_html( $more . ' ' . PC_Ratings::ru_plural( $more, 'сервис', 'сервиса', 'сервисов' ) ) . ' с фильтрами «доступно в РФ» и «бесплатный тариф»</span>' : '<span></span>' )
 			. '<a href="' . esc_url( get_post_type_archive_link( 'contractor' ) ) . '">Все сервисы →</a></div>'
 			. '</aside>';
 	}

@@ -45,7 +45,7 @@ if ( ! is_tax( 'contractor_type' ) ) {
 
 // ---- quick filters
 $quick = array(
-	'no_vpn'    => array( 'globe', 'Без VPN' ),
+	'no_vpn'    => array( 'globe', 'Доступно в РФ' ),
 	'free_tier' => array( 'spark', 'Есть бесплатный тариф' ),
 	'promo'     => array( 'tag', 'Есть промокод' ),
 	'data_ru'   => array( 'shield', 'Данные в РФ' ),
@@ -105,7 +105,7 @@ $offset   = max( 0, ( max( 1, (int) get_query_var( 'paged' ) ) - 1 ) * max( 1, $
 echo '<div class="pc-tbl-wrap"><table class="pc-tbl"><thead><tr>';
 echo '<th class="pc-c-rank">#</th><th>Сервис</th>';
 echo '<th>' . $sort_link( 'Рейтинг', 'rating' ) . '</th>'; // phpcs:ignore WordPress.Security.EscapeOutput
-echo '<th>Без VPN</th><th>Платформы</th>';
+echo '<th>Доступ в РФ</th><th>Платформы</th>';
 echo '<th>' . $sort_link( 'Цена', 'price' ) . '</th>'; // phpcs:ignore WordPress.Security.EscapeOutput
 echo '<th><span class="screen-reader-text">Действия</span></th></tr></thead><tbody>';
 
@@ -116,7 +116,7 @@ foreach ( $wp_query->posts as $i => $post ) {
 	$sub  = trim( $type . ( '' !== $type && '' !== $desc ? ' — ' : '' ) . $desc );
 
 	$vpn = (string) get_post_meta( $id, '_pc_vpn', true );
-	$vpn_cell = 'no' === $vpn ? $yes( 'Без VPN' ) : ( 'yes' === $vpn ? $no( 'Нужен VPN' ) : '<span class="pc-yn is-u">—</span>' );
+	$vpn_cell = 'no' === $vpn ? $yes( 'Доступно' ) : ( 'yes' === $vpn ? $no( 'Не доступно' ) : '<span class="pc-yn is-u">—</span>' );
 
 	echo '<tr>';
 	echo '<td class="pc-c-rank">' . (int) ( $offset + $i + 1 ) . '</td>';

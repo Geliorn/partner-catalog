@@ -103,7 +103,7 @@ PROMPT;
 				'setting' => 'gen_faq',
 				'label'   => 'FAQ (вопросы и ответы)',
 				'short'   => 'FAQ',
-				'schema'  => '"faq": [{"q": "вопрос посетителя", "a": "ответ в 1–3 предложения строго по данным"}] — 3–5 пар; только вопросы, на которые во входных данных есть ответ (VPN, бесплатный тариф, платформы, цены и тарифы)',
+				'schema'  => '"faq": [{"q": "вопрос посетителя", "a": "ответ в 1–3 предложения строго по данным"}] — 3–5 пар; только вопросы, на которые во входных данных есть ответ (доступность в РФ, бесплатный тариф, платформы, цены и тарифы)',
 			),
 		);
 	}
@@ -355,7 +355,7 @@ PROMPT;
 		return implode( "\n", $parts );
 	}
 
-	/** Human-readable usage flags and key facts (VPN, data in RF, platforms). */
+	/** Human-readable usage flags and key facts (availability in RF, data in RF, platforms). */
 	private static function condition_labels( $post_id ) {
 		$labels = array();
 		foreach ( PC_Meta_Fields::flags() as $meta_key => $label ) {

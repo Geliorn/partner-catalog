@@ -185,7 +185,7 @@ class PC_Patterns {
 	}
 
 	private static function archive_table_markup() {
-		return '<!-- wp:partner-catalog/archive-head {"lead":"Сравните условия: работает ли без VPN, как оплатить из России, сколько стоит. Данные проверяет редакция."} /-->
+		return '<!-- wp:partner-catalog/archive-head {"lead":"Сравните условия: доступен ли сервис в РФ, есть ли бесплатный тариф, сколько стоит. Данные проверяет редакция."} /-->
 
 <!-- wp:partner-catalog/archive-table {"align":"wide"} /-->';
 	}
