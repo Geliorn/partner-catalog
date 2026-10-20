@@ -168,22 +168,44 @@ PROMPT;
 		return count( self::incomplete_ids() );
 	}
 
+	/** What happens to an enabled field that already has content. */
+	public static function modes() {
+		return array(
+			'fill'       => 'Не трогать — заполнять только пустые поля',
+			'regenerate' => 'Генерировать заново — старый текст модели не отправляется',
+			'rewrite'    => 'Рерайт — модель получает текущий текст и пишет новый с теми же фактами',
+		);
+	}
+
+	/** Mode from the settings (falls back to 'fill'). */
+	public static function mode() {
+		$mode = (string) PC_Settings::get( 'gen_mode', 'fill' );
+		return array_key_exists( $mode, self::modes() ) ? $mode : 'fill';
+	}
+
 	/**
-	 * Generate and store the enabled fields of one contractor. Without
-	 * $overwrite only empty fields are requested. Returns true if anything
-	 * was written.
+	 * Generate and store the enabled fields of one contractor. 'fill' asks
+	 * only for empty fields; 'regenerate' and 'rewrite' ask for all enabled
+	 * ones, and 'rewrite' also sends their current text as the source to
+	 * rewrite. Returns true if anything was written.
 	 */
-	public static function generate_for_post( $post_id, $overwrite = false ) {
+	public static function generate_for_post( $post_id, $mode = 'fill', $fields = null ) {
 		$targets = array();
-		foreach ( self::enabled_fields() as $key ) {
-			if ( $overwrite || '' === self::current( $post_id, $key ) ) {
-				$targets[] = $key;
+		$rewrite = array();
+		foreach ( null === $fields ? self::enabled_fields() : $fields as $key ) {
+			$filled = '' !== self::current( $post_id, $key );
+			if ( 'fill' === $mode && $filled ) {
+				continue;
+			}
+			$targets[] = $key;
+			if ( 'rewrite' === $mode && $filled ) {
+				$rewrite[] = $key;
 			}
 		}
 		if ( ! $targets ) {
 			return false;
 		}
-		$result = self::generate( self::collect( $post_id ), $targets );
+		$result = self::generate( self::collect( $post_id ), $targets, $rewrite );
 		if ( ! $result ) {
 			return false;
 		}
@@ -203,6 +225,60 @@ PROMPT;
 		if ( isset( $result['faq'] ) ) {
 			update_post_meta( $post_id, '_pc_faq', $result['faq'] );
 		}
+		return true;
+	}
+
+	// ------------------------------------------------ bulk rewrite of «О сервисе»
+
+	/** Start time (microtime) of the current bulk-rewrite pass; 0 = never started. */
+	const REWRITE_RUN_OPTION = 'pc_rewrite_run';
+
+	/** Per-post microtime of its last bulk rewrite. */
+	const REWRITE_META = '_pc_about_rewritten';
+
+	/** Contractor IDs whose «О сервисе» is filled. */
+	private static function about_filled_ids() {
+		$ids = get_posts( array(
+			'post_type'      => 'contractor',
+			'post_status'    => 'any',
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+			'orderby'        => 'ID',
+			'order'          => 'ASC',
+			'no_found_rows'  => true,
+		) );
+		return array_values( array_filter( $ids, function ( $id ) {
+			return '' !== self::current( $id, 'about' );
+		} ) );
+	}
+
+	/**
+	 * Filled records not yet rewritten in the current pass — a record counts
+	 * as done once its stamp is newer than the pass start, so «Продолжить»
+	 * never rewrites the same text twice and a failed one is simply retried.
+	 *
+	 * @return array{pending:int[], total:int, started:bool}
+	 */
+	public static function rewrite_queue() {
+		$run     = (float) get_option( self::REWRITE_RUN_OPTION, 0 );
+		$filled  = self::about_filled_ids();
+		$pending = $run > 0 ? array_values( array_filter( $filled, function ( $id ) use ( $run ) {
+			return (float) get_post_meta( $id, self::REWRITE_META, true ) < $run;
+		} ) ) : array();
+		return array( 'pending' => $pending, 'total' => count( $filled ), 'started' => $run > 0 );
+	}
+
+	/** Begin a new pass: every filled record becomes pending again. */
+	public static function start_rewrite_run() {
+		update_option( self::REWRITE_RUN_OPTION, microtime( true ), false );
+	}
+
+	/** Rewrite one record's «О сервисе» and stamp it. */
+	public static function rewrite_about( $post_id ) {
+		if ( ! self::generate_for_post( $post_id, 'rewrite', array( 'about' ) ) ) {
+			return false;
+		}
+		update_post_meta( $post_id, self::REWRITE_META, (string) microtime( true ) );
 		return true;
 	}
 
@@ -297,15 +373,15 @@ PROMPT;
 	 * Call the model for the $targets fields and parse the JSON into storable
 	 * values (key => string); null on failure or if nothing usable came back.
 	 */
-	public static function generate( array $data, array $targets ) {
+	public static function generate( array $data, array $targets, array $rewrite = array() ) {
 		$config  = self::provider_config();
 		$payload = array(
 			'model'       => $config['model'],
 			'max_tokens'  => 2000,
-			'temperature' => 0.6,
+			'temperature' => $rewrite ? 0.8 : 0.6, // a rewrite should drift further from the source wording
 			'messages'    => array(
 				array( 'role' => 'system', 'content' => self::prompt() ),
-				array( 'role' => 'user', 'content' => self::build_prompt( $data, $targets ) ),
+				array( 'role' => 'user', 'content' => self::build_prompt( $data, $targets, $rewrite ) ),
 			),
 		);
 
@@ -344,7 +420,7 @@ PROMPT;
 		return $out ? $out : null;
 	}
 
-	private static function build_prompt( array $d, array $targets ) {
+	private static function build_prompt( array $d, array $targets, array $rewrite = array() ) {
 		$list = function ( $v ) {
 			if ( is_array( $v ) ) {
 				$v = implode( '; ', array_filter( $v ) );
@@ -356,12 +432,24 @@ PROMPT;
 		foreach ( $targets as $key ) {
 			$schema[] = '  ' . self::fields()[ $key ]['schema'];
 		}
-		// Fields being regenerated are not shown as input, so the model doesn't just copy them.
-		$known = function ( $key ) use ( $d, $targets, $list ) {
+		// Fields being regenerated are not shown as input, so the model doesn't
+		// just copy them; fields being rewritten go to their own block below.
+		$known = function ( $key ) use ( $d, $targets, $rewrite, $list ) {
+			if ( in_array( $key, $rewrite, true ) ) {
+				return '(текущий текст — ниже, в блоке для рерайта)';
+			}
 			return in_array( $key, $targets, true ) ? '—' : $list( $d[ $key ] );
 		};
+		$rewrite_block = '';
+		if ( $rewrite ) {
+			$rewrite_block = "\n\nТекущий текст для рерайта:";
+			foreach ( $rewrite as $key ) {
+				$rewrite_block .= "\n\n[" . self::fields()[ $key ]['short'] . "]\n" . trim( (string) $d[ $key ] );
+			}
+			$rewrite_block .= "\n\nЭти поля — рерайт: перепиши их своими словами. Сохрани все факты и смысл, но смени формулировки, порядок и строение предложений; не копируй фразы дословно и не добавляй фактов, которых нет в данных.";
+		}
 		return sprintf(
-			"Сервис: %s\nСайт: %s\n\nС главной страницы сайта:\n%s\n\nДанные карточки:\nТип: %s\nСпециализация: %s\nЦена: %s\nТарифы: %s\nУсловия и факты: %s\nКороткое описание: %s\nО сервисе: %s\nОсобенности: %s\nFAQ: %s\n\nОтветь СТРОГО JSON-объектом (без markdown-обёртки и пояснений) ровно с этими полями:\n{\n%s\n}",
+			"Сервис: %s\nСайт: %s\n\nС главной страницы сайта:\n%s\n\nДанные карточки:\nТип: %s\nСпециализация: %s\nЦена: %s\nТарифы: %s\nУсловия и факты: %s\nКороткое описание: %s\nО сервисе: %s\nОсобенности: %s\nFAQ: %s%s\n\nОтветь СТРОГО JSON-объектом (без markdown-обёртки и пояснений) ровно с этими полями:\n{\n%s\n}",
 			$list( $d['title'] ),
 			$list( $d['website'] ),
 			'' !== (string) ( $d['site_meta'] ?? '' ) ? $d['site_meta'] : '— (страница не открылась)',
@@ -374,6 +462,7 @@ PROMPT;
 			$known( 'about' ),
 			$known( 'features' ),
 			$known( 'faq' ),
+			$rewrite_block,
 			implode( ",\n", $schema )
 		);
 	}

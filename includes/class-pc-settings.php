@@ -45,7 +45,7 @@ class PC_Settings {
 			'gen_about'             => 1,
 			'gen_features'          => 0,
 			'gen_faq'               => 0,
-			'gen_overwrite'         => 0,
+			'gen_mode'              => 'fill', // fill | regenerate | rewrite — see PC_LLM_Client::modes()
 			'gen_prompt'            => '', // '' = PC_LLM_Client::DEFAULT_PROMPT
 
 			// Feature on/off switches. `ratings`/`related_posts` used to mean "is the
@@ -85,6 +85,14 @@ class PC_Settings {
 		$stored = get_option( self::OPTION_KEY, array() );
 		if ( is_array( $stored ) && isset( $stored['utm_campaign_template'] ) && 'contractor-{slug}' === $stored['utm_campaign_template'] ) {
 			$stored['utm_campaign_template'] = 'service-{slug}';
+			update_option( self::OPTION_KEY, $stored );
+		}
+		// 0.6.1: the «перезаписывать» checkbox became a three-way mode.
+		if ( is_array( $stored ) && array_key_exists( 'gen_overwrite', $stored ) ) {
+			if ( ! isset( $stored['gen_mode'] ) ) {
+				$stored['gen_mode'] = $stored['gen_overwrite'] ? 'regenerate' : 'fill';
+			}
+			unset( $stored['gen_overwrite'] );
 			update_option( self::OPTION_KEY, $stored );
 		}
 	}

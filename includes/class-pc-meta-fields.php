@@ -251,7 +251,7 @@ class PC_Meta_Fields {
 			echo '<a class="button" href="' . esc_url( $gen_url ) . '"' . ( $ready ? '' : ' onclick="alert(\'Укажите API-ключ AI-провайдера в настройках Partner Catalog.\');return false;"' ) . '>✨ Сгенерировать (AI)</a>';
 			echo ' <span class="description">' . esc_html(
 				$sel
-					? 'Заполнит: ' . implode( ', ', wp_list_pluck( $sel, 'short' ) ) . ( PC_Settings::get( 'gen_overwrite' ) ? ' — заполненные будут перезаписаны.' : ' — только пустые.' ) . ' Выбор полей — в настройках Partner Catalog. Сначала сохраните запись.'
+					? 'Заполнит: ' . implode( ', ', wp_list_pluck( $sel, 'short' ) ) . ( array( 'fill' => ' — только пустые.', 'regenerate' => ' — заполненные будут сгенерированы заново.', 'rewrite' => ' — заполненные будут переписаны (рерайт текущего текста).' )[ PC_LLM_Client::mode() ] ) . ' Выбор полей — в настройках Partner Catalog. Сначала сохраните запись.'
 					: 'В настройках Partner Catalog не выбрано ни одно поле для генерации.'
 			) . '</span>';
 			echo '</p>';

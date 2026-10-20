@@ -27,6 +27,7 @@ class PC_Admin {
 		add_action( 'admin_post_pc_save_settings', array( __CLASS__, 'handle_save_settings' ) );
 		add_action( 'admin_post_pc_generate_description', array( __CLASS__, 'handle_generate_description' ) );
 		add_action( 'admin_post_pc_generate_all', array( __CLASS__, 'handle_generate_all' ) );
+		add_action( 'admin_post_pc_rewrite_all', array( __CLASS__, 'handle_rewrite_all' ) );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_dashboard_assets' ) );
 		add_action( 'admin_notices', array( __CLASS__, 'maybe_generation_notice' ) );
 	}
@@ -136,7 +137,12 @@ class PC_Admin {
 							<label style="display:block;margin-bottom:4px"><input type="checkbox" name="<?php echo esc_attr( $f['setting'] ); ?>" value="1" <?php checked( $s[ $f['setting'] ] ); ?>> <?php echo esc_html( $f['label'] ); ?></label>
 						<?php endforeach; ?>
 					</td></tr>
-					<tr><th>Заполненные поля</th><td><label><input type="checkbox" name="gen_overwrite" value="1" <?php checked( $s['gen_overwrite'] ); ?>> перезаписывать</label><p class="description">Выключено — генерация пишет только в пустые поля, ручные правки и данные из CSV не затираются. Включено — выбранные поля генерируются заново (при запуске с карточки сервиса).</p></td></tr>
+					<tr><th>Заполненные поля</th><td>
+						<?php foreach ( PC_LLM_Client::modes() as $val => $label ) : ?>
+							<label style="display:block;margin-bottom:4px"><input type="radio" name="gen_mode" value="<?php echo esc_attr( $val ); ?>" <?php checked( PC_LLM_Client::mode(), $val ); ?>> <?php echo esc_html( $label ); ?></label>
+						<?php endforeach; ?>
+						<p class="description">Действует на кнопку «Сгенерировать (AI)» в карточке сервиса. Пустые выбранные поля заполняются в любом режиме. Массовый запуск всегда только заполняет пустые.</p>
+					</td></tr>
 					<tr><th>Промпт</th><td>
 						<textarea name="gen_prompt" rows="12" style="width:100%;max-width:760px;font-family:monospace;font-size:12.5px"><?php echo esc_textarea( PC_LLM_Client::prompt() ); ?></textarea>
 						<p class="description">Инструкция модели (system-сообщение). Следом модель получает название и сайт сервиса, title, H1 и description его главной страницы, затем данные карточки, а в конце — формат ответа (JSON с выбранными полями): его плагин дописывает сам, здесь его указывать не нужно. Очистите поле и сохраните, чтобы вернуть стандартный промпт.</p>
@@ -166,7 +172,7 @@ class PC_Admin {
 
 			<h2>Массовая генерация</h2>
 			<?php $sel = PC_LLM_Client::enabled_fields(); ?>
-			<p class="description">Заполнит выбранные выше поля (<?php echo esc_html( $sel ? implode( ', ', wp_list_pluck( array_intersect_key( PC_LLM_Client::fields(), array_flip( $sel ) ), 'short' ) ) : 'ничего не выбрано' ); ?>) у сервисов, где хотя бы одно из них <strong>пустое</strong>. Уже заполненные поля массовый запуск не трогает, даже если включена перезапись. До 10 сервисов за запуск, чтобы уложиться в лимит времени — запускайте повторно, пока счётчик не обнулится.</p>
+			<p class="description">Заполнит выбранные выше поля (<?php echo esc_html( $sel ? implode( ', ', wp_list_pluck( array_intersect_key( PC_LLM_Client::fields(), array_flip( $sel ) ), 'short' ) ) : 'ничего не выбрано' ); ?>) у сервисов, где хотя бы одно из них <strong>пустое</strong>. Уже заполненные поля массовый запуск не трогает при любом режиме (заново / рерайт — только с карточки сервиса). До 10 сервисов за запуск, чтобы уложиться в лимит времени — запускайте повторно, пока счётчик не обнулится.</p>
 			<?php
 			$missing = $sel ? PC_LLM_Client::count_incomplete() : 0;
 			$gen_url = wp_nonce_url( admin_url( 'admin-post.php?action=pc_generate_all' ), 'pc_generate_all' );
@@ -174,6 +180,29 @@ class PC_Admin {
 			<p>
 				<a class="button button-primary" href="<?php echo esc_url( $gen_url ); ?>" <?php echo PC_LLM_Client::ready() ? '' : 'onclick="alert(\'Сначала укажите API-ключ провайдера и сохраните настройки.\');return false;"'; ?>>Заполнить пустые поля</a>
 				<span class="description" style="margin-left:8px">Сервисов с пустыми выбранными полями: <?php echo (int) $missing; ?></span>
+			</p>
+
+			<h2>Массовый рерайт «О сервисе»</h2>
+			<p class="description">Переписывает уже заполненный текст «О сервисе» своими словами: модель получает текущий текст и данные карточки, факты сохраняются, формулировки меняются. Другие поля не трогает. Проход идёт по всем сервисам с заполненным «О сервисе», по 10 за запуск; каждый сервис переписывается один раз за проход — «Продолжить», пока счётчик не обнулится. «Начать рерайт» запускает новый проход по всем заново.</p>
+			<?php
+			$rq        = PC_LLM_Client::rewrite_queue();
+			$rw_alert  = PC_LLM_Client::ready() ? '' : 'onclick="alert(\'Сначала укажите API-ключ провайдера и сохраните настройки.\');return false;"';
+			$rw_start  = wp_nonce_url( admin_url( 'admin-post.php?action=pc_rewrite_all&restart=1' ), 'pc_rewrite_all' );
+			$rw_next   = wp_nonce_url( admin_url( 'admin-post.php?action=pc_rewrite_all' ), 'pc_rewrite_all' );
+			$rw_count  = count( $rq['pending'] );
+			?>
+			<p>
+				<?php if ( $rq['started'] && $rw_count ) : ?>
+					<a class="button button-primary" href="<?php echo esc_url( $rw_next ); ?>" <?php echo $rw_alert; // phpcs:ignore WordPress.Security.EscapeOutput ?>>Продолжить рерайт</a>
+				<?php endif; ?>
+				<a class="button<?php echo $rq['started'] && $rw_count ? '' : ' button-primary'; ?>" href="<?php echo esc_url( $rw_start ); ?>" <?php echo '' !== $rw_alert ? $rw_alert : ( $rq['started'] ? 'onclick="return confirm(\'Начать новый проход? Все сервисы с текстом «О сервисе» будут переписаны заново.\')"' : '' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>><?php echo $rq['started'] ? 'Начать рерайт заново' : 'Начать рерайт'; ?></a>
+				<span class="description" style="margin-left:8px"><?php
+				echo esc_html(
+					$rq['started']
+						? sprintf( 'Осталось в текущем проходе: %d из %d', $rw_count, $rq['total'] )
+						: sprintf( 'Сервисов с заполненным «О сервисе»: %d', $rq['total'] )
+				);
+				?></span>
 			</p>
 		</div>
 		<?php
@@ -186,7 +215,7 @@ class PC_Admin {
 		}
 
 		$checkboxes  = array_merge(
-			array( 'integration_ratings', 'integration_related_posts', 'integration_filters', 'integration_schema', 'integration_recommend', 'gen_overwrite' ),
+			array( 'integration_ratings', 'integration_related_posts', 'integration_filters', 'integration_schema', 'integration_recommend' ),
 			wp_list_pluck( PC_LLM_Client::fields(), 'setting' )
 		);
 		$text_fields = array(
@@ -205,6 +234,8 @@ class PC_Admin {
 			$values[ $key ] = isset( $_POST[ $key ] ) ? 1 : 0;
 		}
 		$values['archive_view'] = isset( $_POST['archive_view'] ) && 'table' === $_POST['archive_view'] ? 'table' : 'cards';
+		$mode                   = isset( $_POST['gen_mode'] ) ? sanitize_key( wp_unslash( $_POST['gen_mode'] ) ) : 'fill';
+		$values['gen_mode']     = array_key_exists( $mode, PC_LLM_Client::modes() ) ? $mode : 'fill';
 		if ( isset( $_POST['gen_prompt'] ) ) {
 			// Stored only when it differs from the default, so a later default update still reaches sites that never edited it.
 			$prompt               = trim( sanitize_textarea_field( wp_unslash( $_POST['gen_prompt'] ) ) );
@@ -226,7 +257,7 @@ class PC_Admin {
 		if ( ! $post_id || 'contractor' !== get_post_type( $post_id ) || ! current_user_can( 'edit_post', $post_id ) ) {
 			wp_die( 'Недостаточно прав.' );
 		}
-		$ok  = PC_LLM_Client::ready() && PC_LLM_Client::generate_for_post( $post_id, (bool) PC_Settings::get( 'gen_overwrite' ) );
+		$ok  = PC_LLM_Client::ready() && PC_LLM_Client::generate_for_post( $post_id, PC_LLM_Client::mode() );
 		$url = get_edit_post_link( $post_id, 'url' );
 		wp_safe_redirect( add_query_arg( 'pc_gen', $ok ? 'ok' : 'fail', $url ? $url : admin_url() ) );
 		exit;
@@ -248,9 +279,34 @@ class PC_Admin {
 		}
 		$done = 0;
 		foreach ( PC_LLM_Client::incomplete_ids( 10 ) as $id ) {
-			$done += PC_LLM_Client::generate_for_post( $id, false ) ? 1 : 0;
+			$done += PC_LLM_Client::generate_for_post( $id, 'fill' ) ? 1 : 0;
 		}
 		wp_safe_redirect( add_query_arg( array( 'pc_bulk' => 'done', 'n' => $done ), $redirect ) );
+		exit;
+	}
+
+	/** Bulk rewrite of «О сервисе»: next 10 of the current pass (restart=1 begins a new pass). */
+	public static function handle_rewrite_all() {
+		if ( ! current_user_can( 'manage_options' ) || ! check_admin_referer( 'pc_rewrite_all' ) ) {
+			wp_die( 'Недостаточно прав.' );
+		}
+		$redirect = admin_url( 'admin.php?page=' . self::MAIN_SLUG );
+		if ( ! PC_LLM_Client::ready() ) {
+			wp_safe_redirect( add_query_arg( 'pc_bulk', 'notready', $redirect ) );
+			exit;
+		}
+		if ( ! empty( $_GET['restart'] ) ) {
+			PC_LLM_Client::start_rewrite_run();
+		}
+		if ( function_exists( 'set_time_limit' ) ) {
+			@set_time_limit( 600 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+		}
+		$done = 0;
+		$fail = 0;
+		foreach ( array_slice( PC_LLM_Client::rewrite_queue()['pending'], 0, 10 ) as $id ) {
+			PC_LLM_Client::rewrite_about( $id ) ? ++$done : ++$fail;
+		}
+		wp_safe_redirect( add_query_arg( array( 'pc_rw' => $done, 'pc_rw_fail' => $fail ), $redirect ) );
 		exit;
 	}
 
@@ -260,8 +316,13 @@ class PC_Admin {
 			if ( 'ok' === $_GET['pc_gen'] ) {
 				echo '<div class="notice notice-success is-dismissible"><p>Тексты сгенерированы и сохранены.</p></div>';
 			} else {
-				echo '<div class="notice notice-error is-dismissible"><p>Ничего не сгенерировано: проверьте провайдера и API-ключ, выбранные поля в настройках — или все они уже заполнены, а перезапись выключена.</p></div>';
+				echo '<div class="notice notice-error is-dismissible"><p>Ничего не сгенерировано: проверьте провайдера и API-ключ, выбранные поля в настройках — или все они уже заполнены, а режим — «не трогать».</p></div>';
 			}
+		}
+		if ( isset( $_GET['pc_rw'] ) ) {
+			$fail = (int) ( $_GET['pc_rw_fail'] ?? 0 );
+			echo '<div class="notice ' . ( $fail ? 'notice-warning' : 'notice-success' ) . ' is-dismissible"><p>Переписано «О сервисе»: ' . (int) $_GET['pc_rw']
+				. ( $fail ? ', не удалось: ' . $fail . ' (останутся в очереди, повторятся при следующем запуске)' : '' ) . '.</p></div>';
 		}
 		if ( isset( $_GET['pc_bulk'] ) ) {
 			if ( 'notready' === $_GET['pc_bulk'] ) {
