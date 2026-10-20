@@ -112,8 +112,8 @@ echo '<th><span class="screen-reader-text">Действия</span></th></tr></th
 foreach ( $wp_query->posts as $i => $post ) {
 	$id   = $post->ID;
 	$type = PC_Render::type_name( $id );
-	$fit  = trim( (string) get_post_meta( $id, '_pc_fit', true ) );
-	$sub  = trim( $type . ( '' !== $fit ? ' — ' . $fit : '' ) );
+	$desc = trim( (string) get_post_meta( $id, '_pc_short_description', true ) );
+	$sub  = trim( $type . ( '' !== $type && '' !== $desc ? ' — ' : '' ) . $desc );
 
 	$vpn = (string) get_post_meta( $id, '_pc_vpn', true );
 	$vpn_cell = 'no' === $vpn ? $yes( 'Без VPN' ) : ( 'yes' === $vpn ? $no( 'Нужен VPN' ) : '<span class="pc-yn is-u">—</span>' );

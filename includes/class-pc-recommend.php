@@ -143,8 +143,7 @@ class PC_Recommend {
 		$rows = '';
 		foreach ( $pool as $i => $id ) {
 			$type = PC_Render::type_name( $id );
-			$fit  = trim( (string) get_post_meta( $id, '_pc_fit', true ) );
-			$why  = '' !== $fit ? 'Подойдёт, если ' . rtrim( $fit, '.' ) : trim( (string) get_post_meta( $id, '_pc_short_description', true ) );
+			$why  = trim( (string) get_post_meta( $id, '_pc_short_description', true ) );
 			$url  = get_permalink( $id );
 
 			$rows .= sprintf(

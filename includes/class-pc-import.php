@@ -21,7 +21,6 @@ class PC_Import {
 	private static function meta_columns() {
 		return array(
 			'short_description' => '_pc_short_description',
-			'fit'               => '_pc_fit',
 			'website'           => '_pc_website',
 			'checked'           => '_pc_checked',
 			'price_type'        => '_pc_price_type',
@@ -115,18 +114,18 @@ class PC_Import {
 			<h1>Импорт сервисов из CSV</h1>
 
 			<?php if ( isset( $_GET['imported'] ) ) : ?>
-				<div class="notice notice-success"><p>Импортировано записей: <?php echo (int) $_GET['imported']; ?><?php echo isset( $_GET['skipped'] ) && (int) $_GET['skipped'] ? ', пропущено строк: ' . (int) $_GET['skipped'] : ''; ?>.</p></div>
+				<div class="notice notice-success"><p>Создано записей: <?php echo (int) $_GET['imported']; ?>, обновлено существующих: <?php echo (int) ( $_GET['updated'] ?? 0 ); ?><?php echo isset( $_GET['skipped'] ) && (int) $_GET['skipped'] ? ', пропущено строк (нет названия или сайта): ' . (int) $_GET['skipped'] : ''; ?>.</p></div>
 			<?php endif; ?>
 			<?php if ( isset( $_GET['import_error'] ) ) : ?>
 				<div class="notice notice-error"><p><?php echo esc_html( wp_unslash( $_GET['import_error'] ) ); ?></p></div>
 			<?php endif; ?>
 
-			<p>Файл: <strong>UTF-8 CSV</strong>, первая строка — заголовки. Разделитель столбцов определяется автоматически (<code>,</code>, <code>;</code> или табуляция). Если в ячейке несколько значений (тип, специализация, особенности, оплата, платформы, тарифы, промокоды, FAQ) — разделяйте их вертикальной чертой «<code>|</code>».</p>
+			<p>Файл: <strong>UTF-8 CSV</strong>, первая строка — заголовки. Разделитель столбцов определяется автоматически (<code>,</code>, <code>;</code> или табуляция). Если в ячейке несколько значений (тип, специализация, особенности, платформы, тарифы, промокоды, FAQ) — разделяйте их вертикальной чертой «<code>|</code>».</p>
 			<p><a class="button" href="<?php echo esc_url( $sample_url ); ?>">Скачать образец CSV</a></p>
 
 			<h2>Столбцы</h2>
 			<p class="description" style="max-width:820px">
-				<code>title</code> (обязательно) — название; <code>short_description</code>; <code>fit</code> — продолжение фразы «Подойдёт, если…»; <code>website</code>;
+				<code>title</code> и <code>website</code> (оба обязательны; по ним ищется уже существующий сервис — совпало название <em>или</em> сайт → запись обновляется, а не создаётся дубль; пустые ячейки при обновлении не стирают сохранённые значения); <code>short_description</code> — короткое описание (шапка страницы и карточка);
 				<code>checked</code> — дата проверки условий редакцией (<code>ГГГГ-ММ-ДД</code>);
 				<code>price_type</code> (<?php echo esc_html( implode( ' | ', array_keys( PC_Meta_Fields::price_types() ) ) ); ?>); <code>price_value</code>;
 				<code>vpn</code> — <code>no</code> (работает без VPN) или <code>yes</code> (нужен VPN);
@@ -167,7 +166,7 @@ class PC_Import {
 		// Order = header(): title, meta_columns, flag_columns, set_columns, features, tariffs, promos, faq, type, specialization.
 		fputcsv( $out, array(
 			'ООО «Пример Интеграции»',
-			'Внедряем 1С и Bitrix24 для среднего бизнеса.', 'внедрить AI-агента в CRM компании «под ключ»', 'https://example.com', '2026-10-13',
+			'Внедряем 1С и Bitrix24 для среднего бизнеса.', 'https://example.com', '2026-10-13',
 			'from', '150000', 'no', '20',
 			'', '', 'да', 'да',
 			'',
@@ -179,7 +178,7 @@ class PC_Import {
 			'1С|Bitrix24',
 		) );
 		fputcsv( $out, array(
-			'Cloud Hosting Pro', 'Облачный хостинг и администрирование.', 'поднять MCP-сервер на недорогом VPS', 'https://cloudpro.example', '2026-10-13',
+			'Cloud Hosting Pro', 'Облачный хостинг и администрирование.', 'https://cloudpro.example', '2026-10-13',
 			'subscription', '990', 'no', '60',
 			'', 'да', 'да', 'да',
 			'web|api|selfhost',
@@ -211,18 +210,33 @@ class PC_Import {
 			exit;
 		}
 
+		$index    = self::existing_index();
 		$imported = 0;
+		$updated  = 0;
 		$skipped  = 0;
 		foreach ( $rows as $row ) {
-			$title = trim( (string) ( $row['title'] ?? '' ) );
-			if ( '' === $title ) {
+			$title   = trim( (string) ( $row['title'] ?? '' ) );
+			$website = trim( (string) ( $row['website'] ?? '' ) );
+			if ( '' === $title || '' === $website ) {
 				++$skipped;
 				continue;
 			}
-			$imported += self::import_row( $row ) ? 1 : 0;
+			$url_key   = self::url_key( $website );
+			$title_key = self::title_key( $title );
+			$existing  = $index['url'][ $url_key ] ?? ( $index['title'][ $title_key ] ?? 0 );
+
+			$post_id = self::import_row( $row, $existing );
+			if ( ! $post_id ) {
+				++$skipped;
+				continue;
+			}
+			$existing ? ++$updated : ++$imported;
+			// Later rows of the same file match this record too.
+			$index['url'][ $url_key ]     = $post_id;
+			$index['title'][ $title_key ] = $post_id;
 		}
 
-		wp_safe_redirect( add_query_arg( array( 'imported' => $imported, 'skipped' => $skipped ), $redirect ) );
+		wp_safe_redirect( add_query_arg( array( 'imported' => $imported, 'updated' => $updated, 'skipped' => $skipped ), $redirect ) );
 		exit;
 	}
 
@@ -271,19 +285,72 @@ class PC_Import {
 		return $rows;
 	}
 
-	/** Create one published contractor from a mapped row. */
-	private static function import_row( array $row ) {
-		$post_id = wp_insert_post(
-			array(
-				'post_type'   => 'contractor',
-				'post_status' => 'publish',
-				'post_title'  => sanitize_text_field( $row['title'] ),
-			),
-			true
-		);
-		if ( is_wp_error( $post_id ) || ! $post_id ) {
-			return false;
+	/**
+	 * Duplicate key of a website: host without www + path without trailing
+	 * slash, lower-cased; scheme, query and fragment ignored.
+	 */
+	public static function url_key( $url ) {
+		$url   = trim( (string) $url );
+		$parts = wp_parse_url( preg_match( '#^[a-z][a-z0-9+.-]*://#i', $url ) ? $url : 'https://' . $url );
+		if ( empty( $parts['host'] ) ) {
+			return '';
 		}
+		$host = preg_replace( '/^www\./', '', strtolower( $parts['host'] ) );
+		return $host . rtrim( strtolower( $parts['path'] ?? '' ), '/' );
+	}
+
+	/** Duplicate key of a title: lower-cased, whitespace collapsed. */
+	public static function title_key( $title ) {
+		return mb_strtolower( trim( preg_replace( '/\s+/u', ' ', (string) $title ) ) );
+	}
+
+	/** Existing contractors (not trashed) by url_key() and title_key(); the oldest wins. */
+	public static function existing_index() {
+		$index = array( 'url' => array(), 'title' => array() );
+		$ids   = get_posts( array(
+			'post_type'      => 'contractor',
+			'post_status'    => array( 'publish', 'draft', 'pending', 'private', 'future' ),
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+			'orderby'        => 'ID',
+			'order'          => 'ASC',
+			'no_found_rows'  => true,
+		) );
+		foreach ( $ids as $id ) {
+			$u = self::url_key( (string) get_post_meta( $id, '_pc_website', true ) );
+			$t = self::title_key( get_the_title( $id ) );
+			if ( '' !== $u && ! isset( $index['url'][ $u ] ) ) {
+				$index['url'][ $u ] = $id;
+			}
+			if ( '' !== $t && ! isset( $index['title'][ $t ] ) ) {
+				$index['title'][ $t ] = $id;
+			}
+		}
+		return $index;
+	}
+
+	/**
+	 * Create a published contractor from a mapped row, or update $post_id when
+	 * the row matches an existing one. On update an empty cell keeps the stored
+	 * value. Returns the post ID, or 0 on failure.
+	 */
+	private static function import_row( array $row, $post_id = 0 ) {
+		if ( $post_id ) {
+			$res = wp_update_post( array( 'ID' => $post_id, 'post_title' => sanitize_text_field( $row['title'] ) ), true );
+		} else {
+			$res = wp_insert_post(
+				array(
+					'post_type'   => 'contractor',
+					'post_status' => 'publish',
+					'post_title'  => sanitize_text_field( $row['title'] ),
+				),
+				true
+			);
+		}
+		if ( is_wp_error( $res ) || ! $res ) {
+			return 0;
+		}
+		$post_id = (int) $res;
 
 		$price_types = array_keys( PC_Meta_Fields::price_types() );
 		foreach ( self::meta_columns() as $col => $key ) {
@@ -404,7 +471,7 @@ class PC_Import {
 			}
 		}
 
-		if ( ! empty( $row['logo'] ) ) {
+		if ( ! empty( $row['logo'] ) && ! has_post_thumbnail( $post_id ) ) {
 			self::set_logo( $post_id, trim( (string) $row['logo'] ), (string) $row['title'] );
 		}
 
@@ -414,7 +481,7 @@ class PC_Import {
 		if ( class_exists( 'PC_SEO' ) ) {
 			PC_SEO::apply_meta_description( $post_id, (string) get_post_meta( $post_id, '_pc_short_description', true ) );
 		}
-		return true;
+		return $post_id;
 	}
 
 	/**

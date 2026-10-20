@@ -129,8 +129,18 @@ class PC_Admin {
 				</table>
 
 				<h2>AI-описания сервисов</h2>
-				<p class="description">Генерация короткого (для карточки) и полного (для страницы) описания по данным сервиса. Кнопка «Сгенерировать описание» есть на странице редактирования каждого сервиса; массовая генерация — кнопкой под формой.</p>
+				<p class="description">Генерация текстов по данным сервиса (тип, специализация, цена, тарифы, платформы, условия, уже заполненные поля). Кнопка «Сгенерировать (AI)» есть на странице редактирования каждого сервиса; массовая генерация — кнопкой под формой.</p>
 				<table class="form-table">
+					<tr><th>Что заполнять</th><td>
+						<?php foreach ( PC_LLM_Client::fields() as $key => $f ) : ?>
+							<label style="display:block;margin-bottom:4px"><input type="checkbox" name="<?php echo esc_attr( $f['setting'] ); ?>" value="1" <?php checked( $s[ $f['setting'] ] ); ?>> <?php echo esc_html( $f['label'] ); ?></label>
+						<?php endforeach; ?>
+					</td></tr>
+					<tr><th>Заполненные поля</th><td><label><input type="checkbox" name="gen_overwrite" value="1" <?php checked( $s['gen_overwrite'] ); ?>> перезаписывать</label><p class="description">Выключено — генерация пишет только в пустые поля, ручные правки и данные из CSV не затираются. Включено — выбранные поля генерируются заново (при запуске с карточки сервиса).</p></td></tr>
+					<tr><th>Промпт</th><td>
+						<textarea name="gen_prompt" rows="12" style="width:100%;max-width:760px;font-family:monospace;font-size:12.5px"><?php echo esc_textarea( PC_LLM_Client::prompt() ); ?></textarea>
+						<p class="description">Инструкция модели (system-сообщение). Следом модель получает название и сайт сервиса, title, H1 и description его главной страницы, затем данные карточки, а в конце — формат ответа (JSON с выбранными полями): его плагин дописывает сам, здесь его указывать не нужно. Очистите поле и сохраните, чтобы вернуть стандартный промпт.</p>
+					</td></tr>
 					<tr><th>Провайдер</th><td>
 						<select name="ai_provider">
 							<?php foreach ( PC_LLM_Client::providers() as $val => $label ) : ?>
@@ -154,35 +164,19 @@ class PC_Admin {
 				<?php submit_button( 'Сохранить настройки' ); ?>
 			</form>
 
-			<h2>Массовая генерация описаний</h2>
-			<p class="description">Сгенерирует описание для сервисов <strong>без короткого описания</strong> (до 10 за один запуск, чтобы уложиться в лимит времени — запускайте повторно, пока есть записи).</p>
+			<h2>Массовая генерация</h2>
+			<?php $sel = PC_LLM_Client::enabled_fields(); ?>
+			<p class="description">Заполнит выбранные выше поля (<?php echo esc_html( $sel ? implode( ', ', wp_list_pluck( array_intersect_key( PC_LLM_Client::fields(), array_flip( $sel ) ), 'short' ) ) : 'ничего не выбрано' ); ?>) у сервисов, где хотя бы одно из них <strong>пустое</strong>. Уже заполненные поля массовый запуск не трогает, даже если включена перезапись. До 10 сервисов за запуск, чтобы уложиться в лимит времени — запускайте повторно, пока счётчик не обнулится.</p>
 			<?php
-			$missing = self::count_contractors_without_description();
+			$missing = $sel ? PC_LLM_Client::count_incomplete() : 0;
 			$gen_url = wp_nonce_url( admin_url( 'admin-post.php?action=pc_generate_all' ), 'pc_generate_all' );
 			?>
 			<p>
-				<a class="button button-primary" href="<?php echo esc_url( $gen_url ); ?>" <?php echo PC_LLM_Client::ready() ? '' : 'onclick="alert(\'Сначала укажите API-ключ провайдера и сохраните настройки.\');return false;"'; ?>>Сгенерировать для всех без описания</a>
-				<span class="description" style="margin-left:8px">Без описания: <?php echo (int) $missing; ?></span>
+				<a class="button button-primary" href="<?php echo esc_url( $gen_url ); ?>" <?php echo PC_LLM_Client::ready() ? '' : 'onclick="alert(\'Сначала укажите API-ключ провайдера и сохраните настройки.\');return false;"'; ?>>Заполнить пустые поля</a>
+				<span class="description" style="margin-left:8px">Сервисов с пустыми выбранными полями: <?php echo (int) $missing; ?></span>
 			</p>
 		</div>
 		<?php
-	}
-
-	/** Contractors that still have no short description. */
-	private static function count_contractors_without_description() {
-		$q = new WP_Query( array(
-			'post_type'      => 'contractor',
-			'post_status'    => 'any',
-			'posts_per_page' => 1,
-			'fields'         => 'ids',
-			'no_found_rows'  => false,
-			'meta_query'     => array(
-				'relation' => 'OR',
-				array( 'key' => '_pc_short_description', 'compare' => 'NOT EXISTS' ),
-				array( 'key' => '_pc_short_description', 'value' => '', 'compare' => '=' ),
-			),
-		) );
-		return (int) $q->found_posts;
 	}
 
 	public static function handle_save_settings() {
@@ -191,7 +185,10 @@ class PC_Admin {
 			wp_die( 'Недостаточно прав.' );
 		}
 
-		$checkboxes  = array( 'integration_ratings', 'integration_related_posts', 'integration_filters', 'integration_schema', 'integration_recommend' );
+		$checkboxes  = array_merge(
+			array( 'integration_ratings', 'integration_related_posts', 'integration_filters', 'integration_schema', 'integration_recommend', 'gen_overwrite' ),
+			wp_list_pluck( PC_LLM_Client::fields(), 'setting' )
+		);
 		$text_fields = array(
 			'utm_source', 'utm_medium', 'utm_campaign_template', 'utm_content_template', 'metrika_counter_id', 'seo_plugin',
 			'ai_provider', 'deepseek_api_key', 'deepseek_model', 'qwen_api_key', 'qwen_model', 'qwen_base_url',
@@ -208,6 +205,11 @@ class PC_Admin {
 			$values[ $key ] = isset( $_POST[ $key ] ) ? 1 : 0;
 		}
 		$values['archive_view'] = isset( $_POST['archive_view'] ) && 'table' === $_POST['archive_view'] ? 'table' : 'cards';
+		if ( isset( $_POST['gen_prompt'] ) ) {
+			// Stored only when it differs from the default, so a later default update still reaches sites that never edited it.
+			$prompt               = trim( sanitize_textarea_field( wp_unslash( $_POST['gen_prompt'] ) ) );
+			$values['gen_prompt'] = $prompt === trim( PC_LLM_Client::DEFAULT_PROMPT ) ? '' : $prompt;
+		}
 
 		PC_Settings::update( $values );
 
@@ -224,13 +226,13 @@ class PC_Admin {
 		if ( ! $post_id || 'contractor' !== get_post_type( $post_id ) || ! current_user_can( 'edit_post', $post_id ) ) {
 			wp_die( 'Недостаточно прав.' );
 		}
-		$ok  = PC_LLM_Client::ready() && PC_LLM_Client::generate_for_post( $post_id );
+		$ok  = PC_LLM_Client::ready() && PC_LLM_Client::generate_for_post( $post_id, (bool) PC_Settings::get( 'gen_overwrite' ) );
 		$url = get_edit_post_link( $post_id, 'url' );
 		wp_safe_redirect( add_query_arg( 'pc_gen', $ok ? 'ok' : 'fail', $url ? $url : admin_url() ) );
 		exit;
 	}
 
-	/** Bulk-generate for up to 10 contractors that have no short description yet. */
+	/** Bulk: fill the empty selected fields of up to 10 contractors (never overwrites). */
 	public static function handle_generate_all() {
 		if ( ! current_user_can( 'manage_options' ) || ! check_admin_referer( 'pc_generate_all' ) ) {
 			wp_die( 'Недостаточно прав.' );
@@ -240,21 +242,13 @@ class PC_Admin {
 			wp_safe_redirect( add_query_arg( 'pc_bulk', 'notready', $redirect ) );
 			exit;
 		}
-		$ids = get_posts( array(
-			'post_type'      => 'contractor',
-			'post_status'    => 'any',
-			'posts_per_page' => 10,
-			'fields'         => 'ids',
-			'no_found_rows'  => true,
-			'meta_query'     => array(
-				'relation' => 'OR',
-				array( 'key' => '_pc_short_description', 'compare' => 'NOT EXISTS' ),
-				array( 'key' => '_pc_short_description', 'value' => '', 'compare' => '=' ),
-			),
-		) );
+		// Up to 10 × (home-page fetch + model call) — well past the default 30 s.
+		if ( function_exists( 'set_time_limit' ) ) {
+			@set_time_limit( 600 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+		}
 		$done = 0;
-		foreach ( $ids as $id ) {
-			$done += PC_LLM_Client::generate_for_post( $id ) ? 1 : 0;
+		foreach ( PC_LLM_Client::incomplete_ids( 10 ) as $id ) {
+			$done += PC_LLM_Client::generate_for_post( $id, false ) ? 1 : 0;
 		}
 		wp_safe_redirect( add_query_arg( array( 'pc_bulk' => 'done', 'n' => $done ), $redirect ) );
 		exit;
@@ -264,16 +258,16 @@ class PC_Admin {
 	public static function maybe_generation_notice() {
 		if ( isset( $_GET['pc_gen'] ) ) {
 			if ( 'ok' === $_GET['pc_gen'] ) {
-				echo '<div class="notice notice-success is-dismissible"><p>Описание сгенерировано и сохранено.</p></div>';
+				echo '<div class="notice notice-success is-dismissible"><p>Тексты сгенерированы и сохранены.</p></div>';
 			} else {
-				echo '<div class="notice notice-error is-dismissible"><p>Не удалось сгенерировать описание — проверьте провайдера и API-ключ.</p></div>';
+				echo '<div class="notice notice-error is-dismissible"><p>Ничего не сгенерировано: проверьте провайдера и API-ключ, выбранные поля в настройках — или все они уже заполнены, а перезапись выключена.</p></div>';
 			}
 		}
 		if ( isset( $_GET['pc_bulk'] ) ) {
 			if ( 'notready' === $_GET['pc_bulk'] ) {
 				echo '<div class="notice notice-error is-dismissible"><p>Не задан API-ключ выбранного AI-провайдера.</p></div>';
 			} else {
-				echo '<div class="notice notice-success is-dismissible"><p>Сгенерировано описаний: ' . (int) ( $_GET['n'] ?? 0 ) . '. Если остались записи без описания — запустите ещё раз.</p></div>';
+				echo '<div class="notice notice-success is-dismissible"><p>Заполнено сервисов: ' . (int) ( $_GET['n'] ?? 0 ) . '. Если счётчик ниже не обнулился — запустите ещё раз.</p></div>';
 			}
 		}
 	}

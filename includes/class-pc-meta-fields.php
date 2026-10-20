@@ -106,7 +106,6 @@ class PC_Meta_Fields {
 	public static function meta_keys() {
 		return array(
 			'_pc_short_description' => 'string',
-			'_pc_fit'               => 'string',
 			'_pc_website'           => 'string',
 			'_pc_checked'           => 'string',
 			'_pc_price_type'        => 'string',
@@ -238,7 +237,8 @@ class PC_Meta_Fields {
 		wp_nonce_field( 'pc_save_contractor', 'pc_contractor_nonce' );
 
 		echo '<h3 style="margin-top:0">Основное</h3>';
-		self::field( $post->ID, '_pc_short_description', 'Короткое описание (1–2 предложения, для карточки в архиве)', 'textarea', array( 'rows' => 2 ) );
+		self::field( $post->ID, '_pc_website', 'Сайт (обязательно)', 'url', array( 'description' => 'Вместе с названием — ключ записи: импорт CSV по ним находит уже существующий сервис и обновляет его, а не создаёт дубль.' ) );
+		self::field( $post->ID, '_pc_short_description', 'Короткое описание (1–2 предложения: шапка страницы сервиса и карточка в архиве)', 'textarea', array( 'rows' => 2 ) );
 
 		if ( class_exists( 'PC_LLM_Client' ) ) {
 			$gen_url = wp_nonce_url(
@@ -247,13 +247,16 @@ class PC_Meta_Fields {
 			);
 			$ready = PC_LLM_Client::ready();
 			echo '<p style="margin:4px 0 14px">';
-			echo '<a class="button" href="' . esc_url( $gen_url ) . '"' . ( $ready ? '' : ' onclick="alert(\'Укажите API-ключ AI-провайдера в настройках Partner Catalog.\');return false;"' ) . '>✨ Сгенерировать описание (AI)</a>';
-			echo ' <span class="description">по сохранённым данным (тип, специализация, особенности…); перезапишет короткое и полное описание. Сначала сохраните запись.</span>';
+			$sel   = array_intersect_key( PC_LLM_Client::fields(), array_flip( PC_LLM_Client::enabled_fields() ) );
+			echo '<a class="button" href="' . esc_url( $gen_url ) . '"' . ( $ready ? '' : ' onclick="alert(\'Укажите API-ключ AI-провайдера в настройках Partner Catalog.\');return false;"' ) . '>✨ Сгенерировать (AI)</a>';
+			echo ' <span class="description">' . esc_html(
+				$sel
+					? 'Заполнит: ' . implode( ', ', wp_list_pluck( $sel, 'short' ) ) . ( PC_Settings::get( 'gen_overwrite' ) ? ' — заполненные будут перезаписаны.' : ' — только пустые.' ) . ' Выбор полей — в настройках Partner Catalog. Сначала сохраните запись.'
+					: 'В настройках Partner Catalog не выбрано ни одно поле для генерации.'
+			) . '</span>';
 			echo '</p>';
 		}
 
-		self::field( $post->ID, '_pc_fit', 'Подойдёт, если… (продолжение фразы, выводится в шапке страницы)', 'text', array( 'description' => 'Например: «нужны разные модели в одном окне без VPN и зарубежной карты». Без точки в конце.' ) );
-		self::field( $post->ID, '_pc_website', 'Сайт', 'url' );
 		self::field( $post->ID, '_pc_checked', 'Условия проверены редакцией (дата)', 'date', array( 'description' => 'Выводится внизу страницы: «Условия проверены редакцией ДД.ММ.ГГГГ». Обновляйте после каждой сверки цен и условий.' ) );
 
 		echo '<h3>Стоимость услуг</h3>';

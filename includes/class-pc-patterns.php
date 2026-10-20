@@ -25,6 +25,20 @@ class PC_Patterns {
 		add_action( 'init', array( __CLASS__, 'register' ), 30 );
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'enqueue_assets' ) );
 		add_action( 'enqueue_block_editor_assets', array( __CLASS__, 'enqueue_assets' ) );
+		add_filter( 'render_block_core/group', array( __CLASS__, 'hide_empty_about' ), 10, 2 );
+	}
+
+	/**
+	 * The «О сервисе» group (className pc-about) holds a static heading plus
+	 * post-content; with no text yet only the heading would show — drop the
+	 * whole section instead.
+	 */
+	public static function hide_empty_about( $html, $block ) {
+		$class = (string) ( $block['attrs']['className'] ?? '' );
+		if ( false === strpos( ' ' . $class . ' ', ' pc-about ' ) || 'contractor' !== get_post_type() ) {
+			return $html;
+		}
+		return '' === trim( wp_strip_all_tags( (string) get_post_field( 'post_content', get_the_ID() ) ) ) ? '' : $html;
 	}
 
 	public static function enqueue_assets() {

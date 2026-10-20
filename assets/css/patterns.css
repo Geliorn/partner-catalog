@@ -317,8 +317,7 @@
 .pc-hero-id { display: flex; gap: 20px; align-items: center; }
 .pc-hero-title { margin: 0; font-size: clamp(30px, 5vw, 46px); line-height: 1.05; letter-spacing: -.02em; }
 .pc-hero .pc-meta-line { font-size: 14px; margin-top: 6px; }
-.pc-hero-fit { font-size: clamp(16px, 2.2vw, 19px); margin: 18px 0 0; max-width: 720px; line-height: 1.45; }
-.pc-hero-fit b { color: var(--pc-accent); font-weight: 600; }
+.pc-hero-desc { font-size: clamp(16px, 2.2vw, 19px); margin: 18px 0 0; max-width: 720px; line-height: 1.45; }
 .pc-hero-cta { margin-top: 20px; }
 .pc-scores { display: flex; gap: 10px; }
 .pc-score {

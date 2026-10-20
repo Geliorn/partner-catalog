@@ -26,7 +26,7 @@ if ( is_array( $types ) && $types ) {
 }
 $crumbs[] = '<span>' . esc_html( get_the_title( $post_id ) ) . '</span>';
 
-$fit     = trim( (string) get_post_meta( $post_id, '_pc_fit', true ) );
+$short   = trim( (string) get_post_meta( $post_id, '_pc_short_description', true ) );
 $website = trim( (string) get_post_meta( $post_id, '_pc_website', true ) );
 
 // ---- tiles
@@ -62,8 +62,8 @@ echo '<div class="pc-hero-id">' . PC_Render::logo( $post_id, 'pc-logo-lg' ) . '<
 echo '<h1 class="pc-hero-title">' . esc_html( get_the_title( $post_id ) ) . '</h1>';
 echo PC_Render::meta_line( $post_id ); // phpcs:ignore WordPress.Security.EscapeOutput
 echo '</div></div>';
-if ( '' !== $fit ) {
-	echo '<p class="pc-hero-fit"><b>Подойдёт, если</b> ' . esc_html( rtrim( $fit, '.' ) ) . '.</p>';
+if ( '' !== $short ) {
+	echo '<p class="pc-hero-desc">' . esc_html( $short ) . '</p>';
 }
 if ( '' !== $website ) {
 	printf(

@@ -38,6 +38,16 @@ class PC_Settings {
 			'qwen_model'            => 'qwen-plus',
 			'qwen_base_url'         => 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1',
 
+			// What the generator fills (PC_LLM_Client::fields()), and whether it may
+			// replace a field that already has content. Off = only empty fields are
+			// written, so manual edits and CSV data are never lost by accident.
+			'gen_short'             => 1,
+			'gen_about'             => 1,
+			'gen_features'          => 0,
+			'gen_faq'               => 0,
+			'gen_overwrite'         => 0,
+			'gen_prompt'            => '', // '' = PC_LLM_Client::DEFAULT_PROMPT
+
 			// Feature on/off switches. `ratings`/`related_posts` used to mean "is the
 			// third-party plugin active" — decided 2026-09-04 to bring both in-house
 			// as the plugin's own code (class-pc-ratings.php/class-pc-related.php),
