@@ -83,7 +83,7 @@ class PC_Import {
 			array_keys( self::multiline_columns() ),
 			array( 'tariffs', 'promos', 'faq' ),
 			array_keys( self::taxonomy_columns() ),
-			array( 'logo' )
+			array( 'logo', 'about' )
 		);
 	}
 
@@ -137,7 +137,8 @@ class PC_Import {
 				<code>priority</code> — приоритет в блоке «Где попробовать» (0–100);
 				<code>faq</code> — пары «вопрос <code>::</code> ответ», сами пары через «|»;
 				<code>type</code> — тип сервиса (таксономия <code>contractor_type</code>), <code>specialization</code> — специализация (<code>contractor_specialization</code>); термины через «|», создаются при необходимости;
-				<code>logo</code> — ссылка на картинку логотипа (PNG, JPG, WebP или GIF; ICO не принимается): файл скачивается в медиатеку и становится изображением записи.
+				<code>logo</code> — ссылка на картинку логотипа (PNG, JPG, WebP или GIF; ICO не принимается): файл скачивается в медиатеку и становится изображением записи;
+				<code>about</code> — текст «О сервисе» (основной текст записи); абзацы — через пустую строку внутри ячейки.
 			</p>
 
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" enctype="multipart/form-data">
@@ -469,6 +470,11 @@ class PC_Import {
 			if ( $names ) {
 				wp_set_object_terms( $post_id, $names, $taxonomy ); // creates missing terms by name
 			}
+		}
+
+		// «О сервисе» = post_content; paragraphs are blank-line separated inside the cell.
+		if ( isset( $row['about'] ) && '' !== trim( (string) $row['about'] ) ) {
+			wp_update_post( array( 'ID' => $post_id, 'post_content' => wp_kses_post( wpautop( trim( (string) $row['about'] ) ) ) ) );
 		}
 
 		if ( ! empty( $row['logo'] ) && ! has_post_thumbnail( $post_id ) ) {
